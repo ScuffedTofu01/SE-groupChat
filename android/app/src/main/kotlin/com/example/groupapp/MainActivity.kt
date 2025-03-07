@@ -1,4 +1,4 @@
-package com.example.groupapp
+package com.SE.groupapp
 
 import io.flutter.embedding.android.FlutterActivity
 
