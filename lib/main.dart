@@ -2,7 +2,6 @@ import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:chatapp/firebase_options.dart';
 import 'package:chatapp/main_screen/login_page.dart';
 import 'package:flutter/material.dart';
-import 'main_screen/start_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 
@@ -35,7 +34,7 @@ class MyApp extends StatelessWidget {
       initial: savedTheme ?? AdaptiveThemeMode.light,
       builder: (theme, darkTheme) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Flutter Demo',
+        title: 'Flutter GEMING',
         theme: theme,
         darkTheme: darkTheme,
         home: const LoginPage(),
