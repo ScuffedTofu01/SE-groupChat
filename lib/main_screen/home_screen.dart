@@ -1,5 +1,7 @@
-import 'package:chatapp/utilities/addEventButton.dart';
+import '/utilities/add_event_button.dart';
+import '/utilities/add_event_page.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';  
 import 'package:date_picker_timeline/date_picker_timeline.dart';
@@ -62,10 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 15, top: 15),
             child: AddEventButton(
-              label: "+Add Event",
-              onTap: () {
-                print("Add Event tapped!");
-              },
+              label: "Crete Event",
+              onTap: ()=>Get.to(AddEventPage(),
+              transition: Transition.rightToLeft,)
             ),
           ),
         ],
@@ -87,7 +88,21 @@ class _HomeScreenState extends State<HomeScreen> {
           textStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w500,
-            color: Colors.grey,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        monthTextStyle: GoogleFonts.lato(
+          textStyle: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        dayTextStyle: GoogleFonts.lato(
+          textStyle: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         onDateChange: (date) {
