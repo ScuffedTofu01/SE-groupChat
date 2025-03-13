@@ -65,8 +65,10 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(left: 15, top: 15),
             child: AddEventButton(
               label: "Crete Event",
-              onTap: ()=>Get.to(AddEventPage(),
-              transition: Transition.rightToLeft,)
+              onTap: () => Get.to(
+                () => AddEventPage(),
+                transition: Transition.rightToLeft, 
+              ),
             ),
           ),
         ],

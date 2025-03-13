@@ -1,10 +1,13 @@
+import 'package:chatapp/controllers/event_controller.dart';
 import 'package:intl/intl.dart';
+import '/models/event.dart';
 import '/utilities/input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '/utilities/asset_manager.dart'; 
 import '/main_screen/setting_screen.dart';
 import '/utilities/add_event_button.dart';
+import 'package:get/get.dart';
 
 
 class AddEventPage extends StatefulWidget {
@@ -15,21 +18,72 @@ class AddEventPage extends StatefulWidget {
 }
 
 class _AddEventPageState extends State<AddEventPage> {
+  final EventController _eventController = Get.put(EventController());
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String _startTime = DateFormat("h:mm a").format(DateTime.now()).toString();
   String _endTime = DateFormat("h:mm a").format(DateTime.now()).toString();
 
+  _addEventToDB(){
+    Event event = Event(
+      title: _titleController.text,
+      note: _noteController.text,
+      date: DateFormat("yyyy-MM-dd").format(_selectedDate),
+      startTime: _startTime,
+      endTime: _endTime,
+      color: _selectedColor,
+      isDone: 0,
+    );
+
+     _eventController.addEvent(event: event);
+  }
+
+  _validateData(){
+    if(_titleController.text.isNotEmpty && _noteController.text.isNotEmpty){
+
+      _addEventToDB();
+
+      Get.back();
+    } else if (_titleController.text.isEmpty || _noteController.text.isEmpty) {
+      Get.snackbar(
+      "Required", "All fields are not to be empty",
+      titleText: Text("Required",
+      style: TextStyle(
+        fontSize: 24,
+        color: Theme.of(context).colorScheme.onPrimary,
+      ),
+      ),
+      messageText: Text("All fields are not to be empty",
+      style: TextStyle(
+        fontSize: 18,
+        color: Theme.of(context).colorScheme.onPrimary
+      ),
+      ),
+      colorText: Theme.of(context).colorScheme.onPrimary,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.deepOrange[300],
+      icon: Icon(
+        Icons.warning_amber_rounded,
+        color: Theme.of(context).colorScheme.onPrimary,
+        size: 30,
+      ),
+      margin: EdgeInsets.only(bottom: 10,left: 5, right: 5)
+      );
+    }
+  }
+
   _getDateFromUser() async {
-    DateTime? _pickDate = await showDatePicker(
+    DateTime? pickDate = await showDatePicker(
       context: context, 
       initialDate: DateTime.now(),
       firstDate: DateTime(2010), 
       lastDate: DateTime(2035)
     );
     
-    if (_pickDate != null && _pickDate != _selectedDate) {
+    if (pickDate != null && pickDate != _selectedDate) {
       setState(() {
-        _selectedDate = _pickDate;
+        _selectedDate = pickDate;
       });
     } else {
       print("Something went wrong while picking the date.");
@@ -71,7 +125,7 @@ class _AddEventPageState extends State<AddEventPage> {
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0),
                     child: Text(
-                       "Colour",
+                       "Color",
                         style: TextStyle(
                             fontSize: 16,  
                         ),
@@ -86,7 +140,7 @@ class _AddEventPageState extends State<AddEventPage> {
                         return GestureDetector(
                           onTap: (){
                               setState(() {
-                                _selectedColour = index;
+                                _selectedColor = index;
                               });
                           },
                           child: Padding(
@@ -94,7 +148,7 @@ class _AddEventPageState extends State<AddEventPage> {
                             child: CircleAvatar(
                               radius: 14,
                               backgroundColor: colorList[index],  
-                              child: _selectedColour==index?Icon(
+                              child: _selectedColor==index?Icon(
                                 Icons.done,
                                 color: Colors.white,
                                 size: 20,):Container(),
@@ -115,7 +169,8 @@ class _AddEventPageState extends State<AddEventPage> {
     Color(0xFFFFB93E), 
     Color(0xFFF24C5B),
   ];
-  int _selectedColour = 0;
+  
+  int _selectedColor = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -134,8 +189,8 @@ class _AddEventPageState extends State<AddEventPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              InputField(title: 'Event Name', hint: 'Enter event name'),
-              InputField(title: 'Event Note', hint: 'Enter Event Description'),
+              InputField(title: 'Event Name', hint: 'Enter event name', controller: _titleController,),
+              InputField(title: 'Event Note', hint: 'Enter Event Description', controller: _noteController),
               InputField(
                 title: 'Event Date', 
                 hint: DateFormat('d/MM/yyyy').format(_selectedDate),
@@ -185,7 +240,7 @@ class _AddEventPageState extends State<AddEventPage> {
               Padding(
                 padding: const EdgeInsets.only(top: 30, left: 0),
                 child: AddEventButton(
-                  label: "Create Event", onTap: ()=>null),
+                  label: "Create Event", onTap: ()=>_validateData()),
                 )
           
             ],
@@ -203,10 +258,8 @@ PreferredSizeWidget _topBar(BuildContext context) {
         padding: const EdgeInsets.only(top: 10, right: 30.0, left: 10),
         child: GestureDetector(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SettingScreen()),
-            );
+            Get.to(() => SettingScreen(),
+            transition: Transition.rightToLeft);
           },
           child: CircleAvatar(
             radius: 20,
