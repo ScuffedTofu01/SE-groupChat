@@ -43,4 +43,17 @@ class Event {
     data['color'] = color;
     return data;
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'eventId': eventId,
+      'title': title,
+      'note': note,
+      'isDone': isDone,
+      'date': date,
+      'startTime': startTime,
+      'endTime': endTime,
+      'color': color,
+    };
+  }
 }

@@ -13,4 +13,15 @@ class Constant {
   static const String friendRequestUID = 'friendRequestUID';
   static const String sentFriendRequestUID = 'sentFriendRequestUID';
   static const String groupID = 'groupID';
+
+  static const String profileScreen = '/profileScreen';
+  static const String LoginPage = '/loginpage';
+  static const String homeScreen = '/homeScreen';
+  static const String openingScreen = '/openingScreen';
+  static const String startScreen = '/startScreen';
+  static const String settingScreen = '/settingScreen';
+
+  static const String users = 'users';
+  static const String userImages = 'userImages';
+  static const String userModel = 'userModel';
 }

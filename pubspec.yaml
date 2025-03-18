@@ -32,7 +32,9 @@ dependencies:
   get: ^4.6.5
   get_storage:
   date_picker_timeline:
-  
+  firebase_app_check: ^0.3.2+4
+  permission_handler: ^11.4.0
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

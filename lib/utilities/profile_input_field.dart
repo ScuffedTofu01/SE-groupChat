@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class InputField extends StatelessWidget {
+class ProfileInputField extends StatelessWidget {
   final String title;
   final String hint;
   final TextEditingController? controller;
   final Widget? widget;
 
-  const InputField({
-    Key? key,
+  const ProfileInputField({
+    super.key,
     required this.title,
     required this.hint,
     this.controller,
     this.widget,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +28,12 @@ class InputField extends StatelessWidget {
               title,
               style: GoogleFonts.lato(
                 fontSize: 16,
-                fontWeight: FontWeight.w500
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),        
+          ),
           Container(
-            height: 48,
+            height: 100,  
             margin: const EdgeInsets.only(top: 5),
             decoration: BoxDecoration(
               border: Border.all(
@@ -44,10 +44,9 @@ class InputField extends StatelessWidget {
             ),
             child: Row(
               children: [
-            
                 Expanded(
                   child: TextFormField(
-                    readOnly: widget==null?false:true,
+                    readOnly: widget == null ? false : true,
                     autofocus: false,
                     cursorColor: Colors.blue,
                     controller: controller,
@@ -56,6 +55,8 @@ class InputField extends StatelessWidget {
                       fontWeight: FontWeight.w400,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
+                    maxLines: null,  
+                    keyboardType: TextInputType.multiline,  
                     decoration: InputDecoration(
                       hintText: hint,
                       hintStyle: GoogleFonts.lato(
@@ -63,12 +64,12 @@ class InputField extends StatelessWidget {
                         fontWeight: FontWeight.w300,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                      border: InputBorder.none, 
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10), 
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),  
                     ),
                   ),
                 ),
-                widget==null?Container():Container(child: widget)
+                widget == null ? Container() : Container(child: widget)
               ],
             ),
           ),

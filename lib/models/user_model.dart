@@ -1,7 +1,7 @@
 
 import '/constant.dart';
 
-class Usermodel {
+class UserModel {
   String uid;
   String name;
   String email;
@@ -17,7 +17,7 @@ class Usermodel {
   List<String> sentFriendRequestUID;
   List<String> groupID;
 
-  Usermodel({
+  UserModel({
     required this.uid,
     required this.name,
     required this.email,
@@ -34,8 +34,8 @@ class Usermodel {
     required this.groupID,
   });
 
-  factory Usermodel.fromMap(Map<String, dynamic> map) {
-    return Usermodel(
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
       uid: map[Constant.uid] ?? '', 
       name: map[Constant.name] ?? '',
       email: map[Constant.email] ?? '',

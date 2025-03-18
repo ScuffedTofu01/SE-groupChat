@@ -1,22 +1,45 @@
+import '/provider/authentication_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
+import 'package:provider/provider.dart';
+import 'opening_screen.dart'; 
 import 'start_screen.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+
   Duration get loadingTime => const Duration(milliseconds: 1000);
 
-  Future<String?> _authUser(LoginData data) async {
-    await Future.delayed(loadingTime);
-    return null;
+  Future<String?> _authUser(LoginData data, BuildContext context) async {
+    final authProvider = context.read<AuthenticationProvider>(); 
+    return await authProvider.signInWithEmail(
+      email: data.name,
+      password: data.password,
+      context: context,
+    );
   }
 
-  Future<String?> _recoverPassword(String data) {
-    return Future.delayed(loadingTime);
+  Future<String?> _recoverPassword(String data, BuildContext context) async {
+    final authProvider = context.read<AuthenticationProvider>();
+    return await authProvider.recoverPassword(data, context);
   }
 
-  Future<String?> _signupUser(data) {
-    return Future.delayed(loadingTime);
+  Future<String?> _signupUser(SignupData data, BuildContext context) async {
+    final authProvider = context.read<AuthenticationProvider>();
+    final result = await authProvider.signUpWithEmail(
+      email: data.name ?? '',
+      password: data.password ?? '',
+      context: context,
+    );
+
+    if (result == null) {
+      // Navigate to OpeningScreen after successful sign-up
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (context) => const OpeningScreen(),
+      ));
+    }
+
+    return result;
   }
 
   @override
@@ -30,21 +53,21 @@ class LoginPage extends StatelessWidget {
       body: Theme(
         data: ThemeData(
           textTheme: const TextTheme(
-            bodyLarge: TextStyle(color: Colors.black54), 
+            bodyLarge: TextStyle(color: Colors.black54),
           ),
         ),
         child: FlutterLogin(
           title: "uu aa",
-          onLogin: _authUser,
-          onRecoverPassword: _recoverPassword,
+          onLogin: (data) => _authUser(data, context),
+          onRecoverPassword: (data) => _recoverPassword(data, context),
           onSubmitAnimationCompleted: () {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
               builder: (context) => const StartScreen(),
             ));
           },
-          onSignup: _signupUser,
+          onSignup: (data) => _signupUser(data, context),
           theme: LoginTheme(
-            primaryColor: Colors.lightBlue[200],
+            primaryColor: Colors.lightBlue[200]!,
             accentColor: Colors.blue,
             titleStyle: const TextStyle(
               color: Colors.white,
@@ -57,7 +80,7 @@ class LoginPage extends StatelessWidget {
               fontSize: 15,
             ),
             textFieldStyle: const TextStyle(
-              color: Colors.black, // Ensure this is set to black
+              color: Colors.black,
             ),
             buttonStyle: const TextStyle(
               color: Colors.white,
