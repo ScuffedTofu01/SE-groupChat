@@ -149,7 +149,7 @@ class _OpeningScreenState extends State<OpeningScreen> {
                             showSnackBar(context, 'Please enter your name');
                             return;
                           }
-                          // save user data to firestore
+                          
                           saveUserDataToFireStore();
                         },
                   child: context.watch<AuthenticationProvider>().isLoading

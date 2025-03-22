@@ -29,7 +29,7 @@ class _StartScreenState extends State<StartScreen> {
 
   final List<Widget> pages = const [
     HomeScreen(),
-    ChatListScreen(), 
+    ChatListScreen(),
     GroupListScreen(),
     ScheduleScreen(),
     SettingScreen(),
@@ -42,24 +42,29 @@ class _StartScreenState extends State<StartScreen> {
     });
   }
 
+  void _listenToUserDetails() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((userDoc) {
+        if (userDoc.exists) {
+          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+          setState(() {
+            userImage = userData['image'];
+          });
+        }
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     getThemeMode();
-    _getUserDetails(); 
-  }
-
-  void _getUserDetails() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (userDoc.exists) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-        setState(() {
-          userImage = userData['image'];  
-        });
-      }
-    }
+    _listenToUserDetails();
   }
 
   @override
@@ -69,7 +74,7 @@ class _StartScreenState extends State<StartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "fr fr", 
+          "fr fr",
           style: GoogleFonts.lato(
             fontSize: 24,
             fontWeight: FontWeight.w400,
@@ -82,18 +87,17 @@ class _StartScreenState extends State<StartScreen> {
             padding: const EdgeInsets.only(top: 15, right: 10.0),
             child: GestureDetector(
               onTap: () {
-                
                 Navigator.pushNamed(
-                  context, 
+                  context,
                   '/profileScreen',
-                  arguments: authProvider.userModel?.uid, 
+                  arguments: authProvider.userModel?.uid,
                 );
               },
               child: CircleAvatar(
                 radius: 50,
                 backgroundImage: userImage != null
-                    ? NetworkImage(userImage!)  
-                    : const AssetImage(AssetManager.userImage) as ImageProvider, 
+                    ? NetworkImage('$userImage?timestamp=${DateTime.now().millisecondsSinceEpoch}')
+                    : const AssetImage(AssetManager.userImage) as ImageProvider,
               ),
             ),
           ),

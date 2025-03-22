@@ -133,7 +133,7 @@ class LoginPage extends StatelessWidget {
               ),
               disabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(
-                  color: Colors.red,
+                  color: Colors.blueAccent,
                   width: 4,
                 ),
                 borderRadius: inputBorder,

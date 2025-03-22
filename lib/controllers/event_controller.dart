@@ -9,6 +9,7 @@ class EventController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   var events = <Event>[].obs;
+  var isLoading = false.obs;
 
   Future<void> addEvent({required Event event}) async {
     try {
@@ -76,6 +77,7 @@ class EventController extends GetxController {
 
   Future<void> fetchEventsForUserAndDate(String userId, DateTime date) async {
     try {
+      isLoading.value = true;
       QuerySnapshot calendarSnapshot = await _firestore
           .collection('calendars')
           .where('userId', isEqualTo: userId)
@@ -95,6 +97,8 @@ class EventController extends GetxController {
     } catch (e) {
       print("Error fetching events: $e");
       events.clear();
+    } finally {
+      isLoading.value = false; 
     }
   }
 
@@ -110,4 +114,54 @@ class EventController extends GetxController {
       return [];
     }
   }
+
+void deleteEvent(Event event) async {
+  try {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw Exception("No user is currently signed in.");
+    }
+    final String userId = user.uid;
+
+    // Delete the event from Firestore
+    await _firestore.collection('events').doc(event.eventId).delete();
+
+    // Remove the event from the user's calendar
+    QuerySnapshot calendarSnapshot = await _firestore
+        .collection('calendars')
+        .where('userId', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    if (calendarSnapshot.docs.isNotEmpty) {
+      DocumentReference calendarDocRef = calendarSnapshot.docs.first.reference;
+      await calendarDocRef.update({
+        'events': FieldValue.arrayRemove([event.toMap()]),
+      });
+    }
+
+    // Remove the event from the local list
+    events.remove(event);
+
+    // Refresh the events list
+    await fetchEventsForUserAndDate(userId, DateTime.now());
+
+    Get.snackbar(
+      "Success",
+      "Event deleted successfully!",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+    );
+  } catch (e) {
+    Get.snackbar(
+      "Error",
+      "Failed to delete event: $e",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  }
+}
+
 }

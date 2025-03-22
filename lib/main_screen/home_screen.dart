@@ -1,3 +1,7 @@
+import 'dart:async';
+import '/widget/evenTile.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:intl/intl_standalone.dart';
 import '/global_function/global.dart';
 import '../event_page/add_event_page.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import '/controllers/event_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '/models/event.dart'; // Ensure you import the correct Event model
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,20 +22,49 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final EventController _eventController = Get.put(EventController());
-  DateTime _selectedDate = DateTime.now(); 
+  DateTime _selectedDate = DateTime.now();
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    findSystemLocale().then((locale) {
+      Intl.defaultLocale = locale;
+    });
     _fetchEvents();
+    _timer = Timer.periodic(Duration(minutes: 1), (timer) {
+      setState(() {});
+    });
   }
 
-  void _fetchEvents() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await _eventController.fetchEventsForUserAndDate(user.uid, _selectedDate);
-    }
+  @override
+  void dispose() {
+    _timer?.cancel(); 
+    super.dispose();
   }
+
+ void _fetchEvents() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    await _eventController.fetchEventsForUserAndDate(user.uid, _selectedDate);
+
+    final DateFormat timeFormat = DateFormat("h:mm a");
+    _eventController.events.sort((a, b) {
+      if (a.startTime == null || b.startTime == null) {
+        return 0; 
+      }
+
+      try {
+        final DateTime startTimeA = timeFormat.parse(a.startTime!);
+        final DateTime startTimeB = timeFormat.parse(b.startTime!);
+        return startTimeA.compareTo(startTimeB);
+      } catch (e) {
+        debugPrint("Error parsing startTime: $e");
+        return 0; 
+      }
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _addEventBar(),
-          _addDateBar(),  
+          _addDateBar(),
+          SizedBox(height: 25),
           _showEventBar(),
         ],
       ),
@@ -84,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: "Create Event",
               onTap: () => Get.to(
                 () => AddEventPage(),
-                transition: Transition.rightToLeft, 
+                transition: Transition.rightToLeft,
               ),
             ),
           ),
@@ -126,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         onDateChange: (date) {
           setState(() {
-            _selectedDate = date; 
+            _selectedDate = date;
           });
           _fetchEvents();
         },
@@ -137,6 +171,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _showEventBar() {
     return Expanded(
       child: Obx(() {
+        if (_eventController.isLoading.value) {
+          return Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
         if (_eventController.events.isEmpty) {
           return Center(
             child: Text(
@@ -151,11 +191,22 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView.builder(
             itemCount: _eventController.events.length,
             itemBuilder: (_, index) {
-              Event event = _eventController.events[index];
-              return ListTile(
-                title: Text(event.title ?? ''),
-                subtitle: Text(event.note ?? ''),
-                trailing: Text(event.startTime ?? ''),
+              return AnimationConfiguration.staggeredList(
+                position: index,
+                child: SlideAnimation(
+                  child: FadeInAnimation(
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            
+                          },
+                          child: Eventile(_eventController.events[index]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           );

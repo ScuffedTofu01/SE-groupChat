@@ -88,7 +88,7 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
       }
 
       try {
-        final storageRef = FirebaseStorage.instance.ref().child('user_images/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        final storageRef = FirebaseStorage.instance.ref().child('userImages/${DateTime.now().millisecondsSinceEpoch}.jpg');
         UploadTask uploadTask = storageRef.putFile(imageFile);
         TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
         imageUrl = await snapshot.ref.getDownloadURL();

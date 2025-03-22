@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utilities/asset_manager.dart'; // Ensure this import is correct
+import '/utilities/asset_manager.dart'; 
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});

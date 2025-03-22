@@ -1,4 +1,4 @@
-import 'package:chatapp/global_function/global.dart';
+import '/global_function/global.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utilities/asset_manager.dart';
 import '/models/user_model.dart';
