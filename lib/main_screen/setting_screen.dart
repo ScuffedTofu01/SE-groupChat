@@ -1,4 +1,6 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
+import 'package:chatapp/main_screen/add_friend_page.dart';
+
 import 'package:chatapp/main_screen/profile_setting_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -65,6 +67,8 @@ class _SettingScreenState extends State<SettingScreen> {
           _profileSetting(), 
           const SizedBox(height: 8),
           _changeTheme(), 
+          const SizedBox(height: 8),
+          _addFriend()
         ],
       ),
     );
@@ -75,17 +79,18 @@ class _SettingScreenState extends State<SettingScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(
-          radius: 60,
-          backgroundImage: userImage != null && userImage!.isNotEmpty
-              ? NetworkImage(userImage!)
-              : const AssetImage(AssetManager.userImage) as ImageProvider, 
-        ),
-        const SizedBox(width: 24),
-        Column(
+      return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      CircleAvatar(
+        radius: 60,
+        backgroundImage: userImage != null && userImage!.isNotEmpty
+            ? NetworkImage(userImage!)
+            : const AssetImage(AssetManager.userImage) as ImageProvider,
+      ),
+      const SizedBox(width: 24),
+      Expanded( // Use Expanded to prevent overflow
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -99,7 +104,7 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _user?.email ?? "Not available", 
+              _user?.email ?? "Not available",
               style: GoogleFonts.lato(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -109,20 +114,21 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              userDescription ?? 'No description available', 
+              userDescription ?? 'No description available',
               style: GoogleFonts.lato(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
-                height: 1,
+                height: 1.5,
               ),
-              maxLines: null, 
-              overflow: TextOverflow.visible,  
+              maxLines: 3, // Limit to 3 lines
+              overflow: TextOverflow.ellipsis, // Add ellipsis for overflow
             ),
           ],
         ),
-      ],
-    );
+      ),
+    ],
+  );
   }
 
   Widget _profileSetting() {
@@ -150,6 +156,34 @@ class _SettingScreenState extends State<SettingScreen> {
       ),
     );
   }
+
+  Widget _addFriend() {
+    return Card(
+      child: GestureDetector(
+        onTap: () {
+          Get.to(() => const AddFriendPage(), 
+          transition: Transition.rightToLeft); 
+        },
+        child: ListTile(
+          leading: Icon(
+            Icons.person_add_rounded,
+            size: 30,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
+          title: Text(
+            'Add Friend',
+            style: GoogleFonts.lato(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   Widget _changeTheme() {
     return Card(

@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'package:chatapp/global_function/global.dart';
+import '/widget/evenTile.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import '../global_function/global.dart';
 import '../widget/display_user_image.dart';
 import '/constant.dart';
 import '/models/user_model.dart';
@@ -17,7 +19,13 @@ class OpeningScreen extends StatefulWidget {
 }
 
 void onFail(BuildContext context, String message) {
-  showSnackBar(context, message);
+  showCustomSnackbar(
+    context: context,
+    title: "Error",
+    message: message,
+    backgroundColor: Colors.red,
+    icon: Icons.error_outline,
+  );
 }
 
 class _OpeningScreenState extends State<OpeningScreen> {
@@ -30,23 +38,57 @@ class _OpeningScreenState extends State<OpeningScreen> {
     super.dispose();
   }
 
-  Future<void> selectImage(bool fromCamera) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-    );
 
-    if (pickedFile != null) {
-      finalFileImage = File(pickedFile.path);
-      if (!finalFileImage!.existsSync()) {
-        onFail(context, 'The selected image file does not exist.');
-        return;
-      }
-      setState(() {});
+Future<void> requestGalleryPermission() async {
+  final status = await Permission.photos.request();
+  final storageStatus = await Permission.storage.request(); 
+
+  if (status.isGranted || storageStatus.isGranted) {
+   
+    print('Gallery permission granted');
+  } else if (status.isDenied || storageStatus.isDenied) {
+    
+    print('Gallery permission denied');
+  } else if (status.isPermanentlyDenied || storageStatus.isPermanentlyDenied) {
+
+    openAppSettings();
+  }
+}
+ 
+Future<void> selectImage(bool fromCamera) async {
+  final picker = ImagePicker();
+
+  
+  if (fromCamera) {
+    if (await Permission.camera.request().isGranted) {
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      _handlePickedFile(pickedFile);
     } else {
-      onFail(context, 'No image selected.');
+      onFail(context, 'Camera permission is required.');
+    }
+  } else {
+    await requestGalleryPermission();
+    if (await Permission.photos.request().isGranted) {
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      _handlePickedFile(pickedFile);
+    } else {
+      onFail(context, 'Gallery permission is required.');
     }
   }
+}
+
+void _handlePickedFile(XFile? pickedFile) {
+  if (pickedFile != null) {
+    finalFileImage = File(pickedFile.path);
+    if (!finalFileImage!.existsSync()) {
+      onFail(context, 'The selected image file does not exist.');
+      return;
+    }
+    setState(() {});
+  } else {
+    onFail(context, 'No image selected.');
+  }
+}
 
   Future<void> cropImage(String filePath) async {
     if (filePath.isNotEmpty) {
@@ -146,7 +188,13 @@ class _OpeningScreenState extends State<OpeningScreen> {
                       : () {
                           if (_nameController.text.isEmpty ||
                               _nameController.text.length < 3) {
-                            showSnackBar(context, 'Please enter your name');
+                              showCustomSnackbar(
+                                context: context, 
+                                title: "Invalid Name", 
+                                message: "Please enter your name",
+                                backgroundColor: Colors.red,
+                                icon: Icons.error_outline_outlined
+                                );
                             return;
                           }
                           
@@ -201,7 +249,13 @@ class _OpeningScreenState extends State<OpeningScreen> {
         navigateToStartScreen();
       },
       onFail: () async {
-        showSnackBar(context, 'Failed to save user data');
+        showCustomSnackbar(
+        context: context,
+        title: "Error",
+        message: "Failed to save user data",
+        backgroundColor: Colors.red,
+        icon: Icons.error_outline,
+      );
       },
     );
   }

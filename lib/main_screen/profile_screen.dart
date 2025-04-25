@@ -1,3 +1,4 @@
+import '/main_screen/view_friend_request_page.dart';
 import '/global_function/global.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utilities/asset_manager.dart';
@@ -8,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String? uid;
+
+  const ProfileScreen({Key? key, required this.uid}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -18,35 +21,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? userImage;
 
   @override
-  void initState() {
-    super.initState();
-    _getUserDetails();
-  }
-
-  void _getUserDetails() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (userDoc.exists) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-        setState(() {
-          userImage = userData['image'];
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthenticationProvider>().userModel;
-    final uid = ModalRoute.of(context)!.settings.arguments as String;
 
-    return Scaffold(
+    return  Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Profile'),
         actions: [
-          if (currentUser?.uid == uid)
+          if (currentUser?.uid == widget.uid)
             IconButton(
               onPressed: () async {
                 await context.read<AuthenticationProvider>().logout();
@@ -63,10 +46,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: context.read<AuthenticationProvider>().userStream(userID: uid),
+        stream: context.read<AuthenticationProvider>().userStream(userID: widget.uid!),
         builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('An error occurred'));
+            debugPrint('Error: ${snapshot.error}');
+            return const Center(child: Text('An error occurred while loading the profile.'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -76,6 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
+          debugPrint('User data loaded: ${userModel.toMap()}');
 
           return Padding(
             padding: const EdgeInsets.all(20.0),
@@ -84,9 +69,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Center(
                   child: GestureDetector(
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Profile tapped")),
-                      );
+                      if (userModel.image.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FullScreenImage(imageUrl: userModel.image),
+                          ),
+                        );
+                      }
                     },
                     child: CircleAvatar(
                       radius: 50,
@@ -107,8 +97,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 20),
-                if (currentUser != null)
-                  friendRequestButton(currentUser: currentUser, otherUser: userModel),
+                if (currentUser != null && currentUser.uid != widget.uid)
+                  friendRequestButton(context: context, currentUser: currentUser, otherUser: userModel),
                 const SizedBox(height: 20),
                 const Text(
                   "====== About Me ======",
@@ -116,13 +106,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  userModel.aboutMe,
+                  userModel.aboutMe.isNotEmpty ? userModel.aboutMe : 'No description available.',
                   style: const TextStyle(fontSize: 16),
                 ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class FullScreenImage extends StatelessWidget {
+  final String imageUrl;
+
+  const FullScreenImage({Key? key, required this.imageUrl}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile Image'),
+      ),
+      body: Center(
+        child: Image.network(imageUrl),
       ),
     );
   }

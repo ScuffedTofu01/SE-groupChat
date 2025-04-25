@@ -3,9 +3,12 @@ import 'dart:io';
 import 'package:chatapp/models/user_model.dart';
 import 'package:chatapp/utilities/asset_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../main_screen/view_friend_request_page.dart';
 
 class AddButton extends StatelessWidget {
   final String label;
@@ -119,11 +122,39 @@ class InputField extends StatelessWidget {
   }
 }
 
-void showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
+void showCustomSnackbar({
+  required BuildContext context,
+  required String title,
+  required String message,
+  Color backgroundColor = Colors.deepOrange,
+  IconData icon = Icons.warning_amber_rounded,
+}) {
+  Get.snackbar(
+    title,
+    message,
+    titleText: Text(
+      title,
+      style: TextStyle(
+        fontSize: 24,
+        color: Theme.of(context).colorScheme.onPrimary,
+      ),
     ),
+    messageText: Text(
+      message,
+      style: TextStyle(
+        fontSize: 18,
+        color: Theme.of(context).colorScheme.onPrimary,
+      ),
+    ),
+    colorText: Theme.of(context).colorScheme.onPrimary,
+    snackPosition: SnackPosition.BOTTOM,
+    backgroundColor: backgroundColor,
+    icon: Icon(
+      icon,
+      color: Theme.of(context).colorScheme.onPrimary,
+      size: 30,
+    ),
+    margin: const EdgeInsets.only(bottom: 10, left: 5, right: 5),
   );
 }
 
@@ -180,20 +211,60 @@ Future<File?> pickImage({
   return fileImage;
 }
 
-Widget friendRequestButton({required UserModel currentUser, required UserModel otherUser}) {
+Widget friendRequestButton({
+  required BuildContext context,
+  required UserModel currentUser,
+  required UserModel otherUser,
+}) {
+  // Check if the current user is viewing their own profile
   if (currentUser.uid == otherUser.uid) {
-    if (otherUser.friendRequestUID.isNotEmpty){
+    // Check if there are any friend requests
+    if (otherUser.friendRequestUID.isNotEmpty) {
       return ElevatedButton(
-        onPressed: (){}, 
-        child: Text('View Friend Request',
-        style: GoogleFonts.lato(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+        onPressed: () {
+          // Navigate to the ViewFriendRequestPage
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ViewFriendRequestPage(currentUserUID: currentUser.uid),
+            ),
+          );
+        },
+        child: Text(
+          'View Friend Requests',
+          style: GoogleFonts.lato(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        ),
-        );
+      );
+    } else {
+      return const Text('No friend requests available.');
     }
-  } 
-  return Container(); 
+  } else {
+    return const SizedBox(); 
+  }
 }
 
+Future<void> fetchDataWithRetry({
+  required Future<void> Function() fetchFunction,
+  int maxRetries = 5,
+  Duration initialDelay = const Duration(seconds: 1),
+}) async {
+  int retryCount = 0;
+  Duration delay = initialDelay;
+
+  while (retryCount < maxRetries) {
+    try {
+      await fetchFunction();
+      return; // Exit the loop if the fetch is successful
+    } catch (e) {
+      if (retryCount == maxRetries - 1) {
+        rethrow; // Rethrow the error if max retries are reached
+      }
+      await Future.delayed(delay);
+      delay *= 2; // Double the delay for exponential backoff
+      retryCount++;
+    }
+  }
+}

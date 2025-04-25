@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:chatapp/global_function/global.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../global_function/global.dart';
 import '../models/user_model.dart';
 import '/constant.dart';
 
@@ -146,7 +146,13 @@ class AuthenticationProvider extends ChangeNotifier {
  Future<String?> recoverPassword(String email, BuildContext context) async {
   try {
     await _auth.sendPasswordResetEmail(email: email);
-    showSnackBar(context, "Password reset email sent!");
+    showCustomSnackbar(
+      context: context,
+      title: "Success",
+      message: "Password reset email sent!",
+      backgroundColor: Colors.green,
+      icon: Icons.check_circle,
+    );
     return null;
   } on FirebaseAuthException catch (e) {
     _handleAuthError(context, e);

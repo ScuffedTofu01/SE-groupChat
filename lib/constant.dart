@@ -20,6 +20,7 @@ class Constant {
   static const String openingScreen = '/openingScreen';
   static const String startScreen = '/startScreen';
   static const String settingScreen = '/settingScreen';
+  static const String AddFriendPage = '/addFriendPage';
 
   static const String users = 'users';
   static const String userImages = 'userImages';

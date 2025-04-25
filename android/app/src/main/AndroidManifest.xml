@@ -1,20 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.SE.groupapp">
 
-    <!-- Permissions should be outside the <application> tag -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
-
-    <!-- For Android 10 and above (Scoped Storage) -->
-    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" android:maxSdkVersion="29" />
-
-    <!-- For Android 11 and higher (optional, only if your app requires broad storage access) -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/> 
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+<uses-permission android:name="android.permission.CAMERA"/>
+<uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" android:maxSdkVersion="29"/>
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:label="groupapp"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true">
 
         <!-- Main activity configuration -->
         <activity

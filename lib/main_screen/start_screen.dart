@@ -86,13 +86,22 @@ class _StartScreenState extends State<StartScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 15, right: 10.0),
             child: GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  '/profileScreen',
-                  arguments: authProvider.userModel?.uid,
-                );
-              },
+  onTap: () {
+  final userId = authProvider.userModel?.uid;
+  if (userId != null) {
+    debugPrint('Navigating to ProfileScreen with userId: $userId');
+    Navigator.pushNamed(
+      context,
+      '/profileScreen',
+      arguments: userId,
+    );
+  } else {
+    debugPrint('Error: User ID is null');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Unable to load profile. User ID is missing.')),
+    );
+  }
+},
               child: CircleAvatar(
                 radius: 50,
                 backgroundImage: userImage != null
