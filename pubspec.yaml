@@ -1,6 +1,6 @@
 name: chatapp
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -36,6 +36,7 @@ dependencies:
   permission_handler: ^11.4.0
   cached_network_image: ^3.4.1
   flutter_staggered_animations: ^1.0.0
+  swipe_to: 1.0.6
 
 dev_dependencies:
   flutter_test:

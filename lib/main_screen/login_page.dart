@@ -2,7 +2,7 @@ import '/provider/authentication_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:provider/provider.dart';
-import 'opening_screen.dart'; 
+import 'opening_screen.dart';
 import 'start_screen.dart';
 
 class LoginPage extends StatelessWidget {
@@ -11,7 +11,7 @@ class LoginPage extends StatelessWidget {
   Duration get loadingTime => const Duration(milliseconds: 1000);
 
   Future<String?> _authUser(LoginData data, BuildContext context) async {
-    final authProvider = context.read<AuthenticationProvider>(); 
+    final authProvider = context.read<AuthenticationProvider>();
     return await authProvider.signInWithEmail(
       email: data.name,
       password: data.password,
@@ -34,9 +34,9 @@ class LoginPage extends StatelessWidget {
 
     if (result == null) {
       // Navigate to OpeningScreen after successful sign-up
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => const OpeningScreen(),
-      ));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const OpeningScreen()),
+      );
     }
 
     return result;
@@ -57,13 +57,13 @@ class LoginPage extends StatelessWidget {
           ),
         ),
         child: FlutterLogin(
-          title: "uu aa",
+          title: "this is a title",
           onLogin: (data) => _authUser(data, context),
           onRecoverPassword: (data) => _recoverPassword(data, context),
           onSubmitAnimationCompleted: () {
-            Navigator.of(context).pushReplacement(MaterialPageRoute(
-              builder: (context) => const StartScreen(),
-            ));
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const StartScreen()),
+            );
           },
           onSignup: (data) => _signupUser(data, context),
           theme: LoginTheme(
@@ -75,13 +75,8 @@ class LoginPage extends StatelessWidget {
               fontWeight: FontWeight.w700,
               letterSpacing: 3,
             ),
-            bodyStyle: const TextStyle(
-              color: Colors.black54,
-              fontSize: 15,
-            ),
-            textFieldStyle: const TextStyle(
-              color: Colors.black,
-            ),
+            bodyStyle: const TextStyle(color: Colors.black54, fontSize: 15),
+            textFieldStyle: const TextStyle(color: Colors.black),
             buttonStyle: const TextStyle(
               color: Colors.white,
               fontSize: 15,
@@ -96,46 +91,26 @@ class LoginPage extends StatelessWidget {
               filled: true,
               fillColor: const Color.fromARGB(255, 231, 246, 251),
               contentPadding: EdgeInsets.zero,
-              errorStyle: TextStyle(
-                color: Colors.red[600],
-              ),
-              labelStyle: TextStyle(
-                fontSize: 15,
-                color: Colors.black54,
-              ),
+              errorStyle: TextStyle(color: Colors.red[600]),
+              labelStyle: TextStyle(fontSize: 15, color: Colors.black54),
               enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.lightBlue,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: Colors.lightBlue, width: 2),
                 borderRadius: inputBorder,
               ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.blueAccent,
-                  width: 5,
-                ),
+                borderSide: BorderSide(color: Colors.blueAccent, width: 5),
                 borderRadius: inputBorder,
               ),
               errorBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.red,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: Colors.red, width: 2),
                 borderRadius: inputBorder,
               ),
               focusedErrorBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.red,
-                  width: 5,
-                ),
+                borderSide: BorderSide(color: Colors.red, width: 5),
                 borderRadius: inputBorder,
               ),
               disabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Colors.blueAccent,
-                  width: 4,
-                ),
+                borderSide: BorderSide(color: Colors.blueAccent, width: 4),
                 borderRadius: inputBorder,
               ),
             ),

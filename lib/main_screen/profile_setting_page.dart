@@ -40,7 +40,11 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
   Future<void> _loadUserData() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
 
       if (userDoc.exists) {
         Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
@@ -66,7 +70,9 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
   }
 
   void onFail(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> requestGalleryPermission() async {
@@ -82,13 +88,18 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
     if (userImage != null && !userImage!.startsWith('http')) {
       File imageFile = File(userImage!);
 
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      String uid = currentUser?.uid ?? '';
+
       if (!imageFile.existsSync()) {
         onFail('The selected image file does not exist.');
         return;
       }
 
       try {
-        final storageRef = FirebaseStorage.instance.ref().child('userImages/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        final storageRef = FirebaseStorage.instance.ref().child(
+          'userImages/${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
         UploadTask uploadTask = storageRef.putFile(imageFile);
         TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
         imageUrl = await snapshot.ref.getDownloadURL();
@@ -108,8 +119,8 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
       image: imageUrl ?? '',
       token: '',
       aboutMe: _descriptionController.text,
-      lastSeen: '',
-      createdAt: DateTime.now().toString(),
+      lastSeen: DateTime.now(),
+      createdAt: DateTime.now(),
       userSchedule: '',
       isOnline: true,
       friendUID: [],
@@ -119,8 +130,13 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
     );
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(userModel.toMap(), SetOptions(merge: true));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set(userModel.toMap(), SetOptions(merge: true));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
     } catch (e) {
       onFail('An error occurred while saving the profile: $e');
     }
@@ -149,11 +165,13 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
                 children: [
                   CircleAvatar(
                     radius: 60,
-                    backgroundImage: userImage != null && userImage!.startsWith('http')
-                        ? NetworkImage(userImage!)
-                        : userImage != null
+                    backgroundImage:
+                        userImage != null && userImage!.startsWith('http')
+                            ? NetworkImage(userImage!)
+                            : userImage != null
                             ? FileImage(File(userImage!))
-                            : AssetImage(AssetManager.userImage) as ImageProvider,
+                            : AssetImage(AssetManager.userImage)
+                                as ImageProvider,
                   ),
                   Positioned(
                     bottom: 0,
@@ -170,11 +188,19 @@ class _ProfileSettingPageState extends State<ProfileSettingPage> {
                 ],
               ),
               SizedBox(height: 20),
-              InputField(title: 'Username', hint: 'Enter Username here', controller: _nameController),
+              InputField(
+                title: 'Username',
+                hint: 'Enter Username here',
+                controller: _nameController,
+              ),
               SizedBox(height: 20),
-              ProfileInputField(title: 'Description', hint: 'Enter Description about you (dont put too much word)', controller: _descriptionController),
+              ProfileInputField(
+                title: 'Description',
+                hint: 'Enter Description about you (dont put too much word)',
+                controller: _descriptionController,
+              ),
               SizedBox(height: 20),
-              AddButton(label: 'Save Profile', onTap: saveUserData)
+              AddButton(label: 'Save Profile', onTap: saveUserData),
             ],
           ),
         ),

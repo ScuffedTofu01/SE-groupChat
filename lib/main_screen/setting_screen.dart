@@ -22,6 +22,7 @@ class _SettingScreenState extends State<SettingScreen> {
   String? userImage;
   String? userDescription;
   String? userName;
+  bool isLoading = true;
 
   void getThemeMode() async {
     final savedTheme = await AdaptiveTheme.getThemeMode();
@@ -31,6 +32,11 @@ class _SettingScreenState extends State<SettingScreen> {
   }
 
   void _getUserDetails() async {
+
+    setState(() {
+      isLoading = true;
+    });
+
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -41,6 +47,11 @@ class _SettingScreenState extends State<SettingScreen> {
           userImage = userData['image'] ?? ''; 
           userDescription = userData['aboutMe'] ?? 'No description available'; 
           userName = userData['name'] ?? 'No username available'; 
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = true;
         });
       }
     }
@@ -75,11 +86,13 @@ class _SettingScreenState extends State<SettingScreen> {
   }
 
   Widget _userProfile() {
-    if (_user == null) {
-      return const Center(child: CircularProgressIndicator());
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator()
+        );
     }
 
-      return Row(
+    return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       CircleAvatar(
@@ -89,7 +102,7 @@ class _SettingScreenState extends State<SettingScreen> {
             : const AssetImage(AssetManager.userImage) as ImageProvider,
       ),
       const SizedBox(width: 24),
-      Expanded( // Use Expanded to prevent overflow
+      Expanded( 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -121,8 +134,8 @@ class _SettingScreenState extends State<SettingScreen> {
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
                 height: 1.5,
               ),
-              maxLines: 3, // Limit to 3 lines
-              overflow: TextOverflow.ellipsis, // Add ellipsis for overflow
+              maxLines: 3, 
+              overflow: TextOverflow.ellipsis, 
             ),
           ],
         ),

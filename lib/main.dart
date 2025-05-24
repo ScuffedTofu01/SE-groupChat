@@ -1,10 +1,12 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:chatapp/constant.dart';
 import 'package:chatapp/main_screen/add_friend_page.dart';
+import 'package:chatapp/main_screen/chat_screen.dart';
 import 'package:chatapp/main_screen/home_screen.dart';
 import 'package:chatapp/main_screen/opening_screen.dart';
 import 'package:chatapp/main_screen/setting_screen.dart';
 import 'package:chatapp/main_screen/start_screen.dart';
+import 'package:chatapp/provider/chat_provider.dart';
 import '/firebase_options.dart';
 import '/main_screen/login_page.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +30,19 @@ void main() async {
 
   final savedTheme = await AdaptiveTheme.getThemeMode();
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => AuthenticationProvider(),
-      child: MyApp(savedTheme: savedTheme),
-    ),
-  );
+runApp(
+  MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (context) => AuthenticationProvider(),
+      ),
+      ChangeNotifierProvider(
+        create: (context) => ChatProvider(), 
+      ),
+    ],
+    child: MyApp(savedTheme: savedTheme),
+  ),
+);
 }
 
 class MyApp extends StatelessWidget {
@@ -69,6 +78,7 @@ class MyApp extends StatelessWidget {
           GetPage(name: Constant.startScreen, page: () => const StartScreen()),
           GetPage(name: Constant.settingScreen, page: () => const SettingScreen()),
           GetPage(name: Constant.AddFriendPage, page: () => const AddFriendPage()),
+          GetPage(name: Constant.ChatScreen, page: () => const ChatScreen()),
         ],
       ),
     );

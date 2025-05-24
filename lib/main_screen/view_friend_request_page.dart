@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ViewFriendRequestPage extends StatefulWidget {
-  const ViewFriendRequestPage({Key? key, required this.currentUserUID}) : super(key: key);
+  const ViewFriendRequestPage({super.key, required this.currentUserUID});
   final String currentUserUID;
 
   @override
@@ -22,32 +22,32 @@ class _ViewFriendRequestPageState extends State<ViewFriendRequestPage> {
   }
 
   Future<void> _fetchFriendRequestCount() async {
-  try {
-    await fetchDataWithRetry(
-      fetchFunction: () async {
-        final currentUser = FirebaseAuth.instance.currentUser;
+    try {
+      await fetchDataWithRetry(
+        fetchFunction: () async {
+          final currentUser = FirebaseAuth.instance.currentUser;
 
-        if (currentUser == null) {
-          throw Exception('User is not logged in.');
-        }
+          if (currentUser == null) {
+            throw Exception('User is not logged in.');
+          }
 
-        final currentUserUID = currentUser.uid;
+          final currentUserUID = currentUser.uid;
 
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .where('friendRequestUID', arrayContains: currentUserUID)
-            .get();
+          final querySnapshot =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .where('friendRequestUID', arrayContains: currentUserUID)
+                  .get();
 
-        setState(() {
-          _totalFriendRequests = querySnapshot.docs.length;
-        });
-      },
-    );
-  } catch (e) {
-    print('Error fetching friend requests: $e');
+          setState(() {
+            _totalFriendRequests = querySnapshot.docs.length;
+          });
+        },
+      );
+    } catch (e) {
+      print('Error fetching friend requests: $e');
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +75,7 @@ class _ViewFriendRequestPageState extends State<ViewFriendRequestPage> {
   }
 
   PreferredSizeWidget appBar() {
-    return AppBar(
-      centerTitle: true,
-      title: const Text('View Friend Requests'),
-    );
+    return AppBar(centerTitle: true, title: const Text('View Friend Requests'));
   }
 
   Widget friendProfileContainer(BuildContext context) {
@@ -87,20 +84,17 @@ class _ViewFriendRequestPageState extends State<ViewFriendRequestPage> {
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimaryContainer,
-        borderRadius: BorderRadius.circular(20), 
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             'Total Friend Requests:',
-            style: GoogleFonts.lato(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+            style: GoogleFonts.lato(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           Text(
-            '$_totalFriendRequests', 
+            '$_totalFriendRequests',
             style: GoogleFonts.lato(
               fontSize: 20,
               fontWeight: FontWeight.w600,

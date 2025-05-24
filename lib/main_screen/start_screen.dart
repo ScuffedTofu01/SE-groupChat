@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:adaptive_theme/adaptive_theme.dart';
 import '/main_screen/setting_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,12 +22,15 @@ class StartScreen extends StatefulWidget {
   State<StartScreen> createState() => _StartScreenState();
 }
 
-class _StartScreenState extends State<StartScreen> {
+class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver{
   final PageController pageController = PageController(initialPage: 0);
 
   bool isDarkTheme = false;
   int currentIndex = 0;
   String? userImage;
+  bool isLoading = true;
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<DocumentSnapshot>? _userDetailsSubscription;
 
   final List<Widget> pages = const [
     HomeScreen(),
@@ -42,29 +47,95 @@ class _StartScreenState extends State<StartScreen> {
     });
   }
 
-  void _listenToUserDetails() {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .listen((userDoc) {
-        if (userDoc.exists) {
-          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-          setState(() {
-            userImage = userData['image'];
-          });
-        }
-      });
-    }
+void _listenToUserDetails() {
+  _userDetailsSubscription?.cancel();
+
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    setState(() {
+      isLoading = true; 
+    });
+
+    _userDetailsSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((userDoc) {
+          if (!mounted) return;
+          if (userDoc.exists) {
+            Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+            setState(() {
+              userImage = userData['image'];
+              isLoading = false; 
+            });
+          } else {
+            setState(() {
+              userImage = null;
+              isLoading = false; 
+            });
+          }
+        });
+  } else {
+    setState(() {
+      userImage = null;
+      isLoading = false; 
+    });
   }
+}
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     getThemeMode();
-    _listenToUserDetails();
+
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if(!mounted) return;
+      if (user == null) {
+       setState(() {
+        userImage = null;
+        isLoading = false;
+       });
+    } else {
+      setState(() {
+        isLoading = true;
+      });
+      _listenToUserDetails();
+    }
+  }
+  );
+}
+
+@override
+void dispose() {
+  _authSubscription?.cancel(); 
+  _userDetailsSubscription?.cancel(); 
+  WidgetsBinding.instance.removeObserver(this);
+  super.dispose();
+}
+
+ @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state); // Call super
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (state == AppLifecycleState.resumed) {
+        // App is active and in the foreground
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'lastSeen': FieldValue.serverTimestamp()});
+      } else if (state == AppLifecycleState.inactive ||
+                 state == AppLifecycleState.paused ||
+                 state == AppLifecycleState.detached) {
+        // App is going into the background, being closed, or is inactive
+        // Update lastSeen to the current time
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'lastSeen': FieldValue.serverTimestamp()});
+      }
+    }
   }
 
   @override
@@ -86,27 +157,53 @@ class _StartScreenState extends State<StartScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 15, right: 10.0),
             child: GestureDetector(
-  onTap: () {
-  final userId = authProvider.userModel?.uid;
-  if (userId != null) {
-    debugPrint('Navigating to ProfileScreen with userId: $userId');
-    Navigator.pushNamed(
-      context,
-      '/profileScreen',
-      arguments: userId,
-    );
-  } else {
-    debugPrint('Error: User ID is null');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unable to load profile. User ID is missing.')),
-    );
-  }
-},
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: userImage != null
-                    ? NetworkImage('$userImage?timestamp=${DateTime.now().millisecondsSinceEpoch}')
-                    : const AssetImage(AssetManager.userImage) as ImageProvider,
+         onTap: () {
+            final userId = authProvider.userModel?.uid;
+            if (userId != null) {
+              debugPrint('Navigating to ProfileScreen with userId: $userId');
+              Navigator.pushNamed(
+                context,
+                '/profileScreen',
+                arguments: userId,
+               );
+              } else {
+                debugPrint('Error: User ID is null');
+                ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Unable to load profile. User ID is missing.')
+                  ),
+                );
+                }
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (isLoading)
+                    const CircularProgressIndicator(
+                      color: Colors.lightBlue,
+                    ),
+
+                  if(!isLoading) 
+                  ClipOval(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(
+                          image: userImage != null
+                              ? NetworkImage(
+                                  '$userImage?timestamp=${DateTime.now().millisecondsSinceEpoch}')
+                              : const AssetImage(AssetManager.userImage)
+                                  as ImageProvider,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+
               ),
             ),
           ),

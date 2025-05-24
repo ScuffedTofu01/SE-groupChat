@@ -20,13 +20,11 @@ class AuthenticationProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isSuccessful = false;
 
-  
   bool get isLoading => _isLoading;
   bool get isSuccessful => _isSuccessful;
   UserModel? get userModel => _userModel;
   User? get user => _user;
   String? get uid => _uid;
-
 
   Future<String?> signUpWithEmail({
     required String email,
@@ -35,10 +33,8 @@ class AuthenticationProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       _setUser(userCredential.user);
       await _fetchUserData();
@@ -76,7 +72,8 @@ class AuthenticationProvider extends ChangeNotifier {
 
   Future<void> _fetchUserData() async {
     if (_uid == null) return;
-    DocumentSnapshot userDoc = await _firestore.collection(Constant.users).doc(_uid).get();
+    DocumentSnapshot userDoc =
+        await _firestore.collection(Constant.users).doc(_uid).get();
     if (userDoc.exists) {
       _userModel = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
       await _saveUserToLocal();
@@ -93,17 +90,23 @@ class AuthenticationProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       if (fileImage != null) {
-        String imageUrl = await _uploadFile(fileImage, '${Constant.userImages}/${userModel.uid}');
+        String imageUrl = await _uploadFile(
+          fileImage,
+          '${Constant.userImages}/${userModel.uid}',
+        );
         userModel.image = imageUrl;
       }
 
-      userModel.lastSeen = DateTime.now().microsecondsSinceEpoch.toString();
-      userModel.createdAt = DateTime.now().microsecondsSinceEpoch.toString();
+      userModel.lastSeen = DateTime.now();
+      userModel.createdAt = userModel.createdAt ?? DateTime.now();
 
-      await _firestore.collection(Constant.users).doc(userModel.uid).set(userModel.toMap());
+      await _firestore
+          .collection(Constant.users)
+          .doc(userModel.uid)
+          .set(userModel.toMap());
       _userModel = userModel;
 
-      await createCalendarForUser(userModel.uid); 
+      await createCalendarForUser(userModel.uid);
 
       onSuccess();
     } catch (e) {
@@ -143,23 +146,23 @@ class AuthenticationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
- Future<String?> recoverPassword(String email, BuildContext context) async {
-  try {
-    await _auth.sendPasswordResetEmail(email: email);
-    showCustomSnackbar(
-      context: context,
-      title: "Success",
-      message: "Password reset email sent!",
-      backgroundColor: Colors.green,
-      icon: Icons.check_circle,
-    );
-    return null;
-  } on FirebaseAuthException catch (e) {
-    _handleAuthError(context, e);
-    return e.message;
+  Future<String?> recoverPassword(String email, BuildContext context) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      showCustomSnackbar(
+        context: context,
+        title: "Success",
+        message: "Password reset email sent!",
+        backgroundColor: Colors.green,
+        icon: Icons.check_circle,
+      );
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _handleAuthError(context, e);
+      return e.message;
+    }
   }
- }
- 
+
   Future<bool> checkAuthenticationState() async {
     await Future.delayed(const Duration(seconds: 2));
     if (_auth.currentUser != null) {
@@ -188,10 +191,12 @@ class AuthenticationProvider extends ChangeNotifier {
   Future<void> _saveUserToLocal() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (_userModel != null) {
-      await prefs.setString(Constant.userModel, jsonEncode(_userModel!.toMap()));
+      await prefs.setString(
+        Constant.userModel,
+        jsonEncode(_userModel!.toJson()), // Use toJson() here
+      );
     }
   }
-
 
   void saveUserDataToFireStore({
     required UserModel userModel,
@@ -203,21 +208,28 @@ class AuthenticationProvider extends ChangeNotifier {
 
     try {
       if (fileImage != null) {
-        String imageUrl = await _uploadFile(fileImage, '${Constant.userImages}/${userModel.uid}');
+        String imageUrl = await _uploadFile(
+          fileImage,
+          '${Constant.userImages}/${userModel.uid}',
+        );
         userModel.image = imageUrl;
       }
 
-      userModel.lastSeen = DateTime.now().microsecondsSinceEpoch.toString();
-      userModel.createdAt = DateTime.now().microsecondsSinceEpoch.toString();
+      userModel.lastSeen = DateTime.now();
+      userModel.createdAt =
+          userModel.createdAt ??
+          DateTime.now(); // Set createdAt only if it's null
 
       _userModel = userModel;
       _uid = userModel.uid;
 
-      await _firestore.collection(Constant.users).doc(userModel.uid).set(userModel.toMap());
+      await _firestore
+          .collection(Constant.users)
+          .doc(userModel.uid)
+          .set(userModel.toMap());
 
       await createCalendarForUser(userModel.uid);
 
-      
       onSuccess();
     } on FirebaseException catch (e) {
       _isLoading = false;
@@ -226,16 +238,22 @@ class AuthenticationProvider extends ChangeNotifier {
     }
   }
 
-
   Future<void> saveUserDataToSharedPreferences() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    await sharedPreferences.setString(Constant.userModel, jsonEncode(userModel!.toMap()));
+    if (userModel != null) {
+      // Check the getter userModel
+      await sharedPreferences.setString(
+        Constant.userModel,
+        jsonEncode(userModel!.toJson()), // Use toJson() here
+      );
+    } else {
+      print(
+        "AuthenticationProvider: userModel is null, cannot save to SharedPreferences.",
+      );
+    }
   }
 
-    Stream<DocumentSnapshot> userStream({required String userID}) {
+  Stream<DocumentSnapshot> userStream({required String userID}) {
     return _firestore.collection(Constant.users).doc(userID).snapshots();
   }
-
- 
 }
-  

@@ -1,6 +1,4 @@
-import '/main_screen/view_friend_request_page.dart';
 import '/global_function/global.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../utilities/asset_manager.dart';
 import '/models/user_model.dart';
 import '/provider/authentication_provider.dart';
@@ -11,7 +9,7 @@ import 'package:provider/provider.dart';
 class ProfileScreen extends StatefulWidget {
   final String? uid;
 
-  const ProfileScreen({Key? key, required this.uid}) : super(key: key);
+  const ProfileScreen({super.key, required this.uid});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,7 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthenticationProvider>().userModel;
 
-    return  Scaffold(
+    return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Profile'),
@@ -46,11 +44,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: context.read<AuthenticationProvider>().userStream(userID: widget.uid!),
-        builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+        stream: context.read<AuthenticationProvider>().userStream(
+          userID: widget.uid!,
+        ),
+        builder: (
+          BuildContext context,
+          AsyncSnapshot<DocumentSnapshot> snapshot,
+        ) {
           if (snapshot.hasError) {
             debugPrint('Error: ${snapshot.error}');
-            return const Center(child: Text('An error occurred while loading the profile.'));
+            return const Center(
+              child: Text('An error occurred while loading the profile.'),
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -59,7 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return const Center(child: Text('User not found.'));
           }
 
-          final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
+          final userModel = UserModel.fromMap(
+            snapshot.data!.data() as Map<String, dynamic>,
+          );
           debugPrint('User data loaded: ${userModel.toMap()}');
 
           return Padding(
@@ -73,23 +80,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => FullScreenImage(imageUrl: userModel.image),
+                            builder:
+                                (context) =>
+                                    FullScreenImage(imageUrl: userModel.image),
                           ),
                         );
                       }
                     },
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: userModel.image.isNotEmpty
-                          ? NetworkImage(userModel.image)
-                          : const AssetImage(AssetManager.userImage) as ImageProvider,
+                      backgroundImage:
+                          userModel.image.isNotEmpty
+                              ? NetworkImage(userModel.image)
+                              : const AssetImage(AssetManager.userImage)
+                                  as ImageProvider,
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   userModel.name,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -98,7 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
                 if (currentUser != null && currentUser.uid != widget.uid)
-                  friendRequestButton(context: context, currentUser: currentUser, otherUser: userModel),
+                  friendRequestButton(
+                    context: context,
+                    currentUser: currentUser,
+                    otherUser: userModel,
+                  ),
                 const SizedBox(height: 20),
                 const Text(
                   "====== About Me ======",
@@ -106,7 +124,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  userModel.aboutMe.isNotEmpty ? userModel.aboutMe : 'No description available.',
+                  userModel.aboutMe.isNotEmpty
+                      ? userModel.aboutMe
+                      : 'No description available.',
                   style: const TextStyle(fontSize: 16),
                 ),
               ],
@@ -121,17 +141,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
 
-  const FullScreenImage({Key? key, required this.imageUrl}) : super(key: key);
+  const FullScreenImage({super.key, required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile Image'),
-      ),
-      body: Center(
-        child: Image.network(imageUrl),
-      ),
+      appBar: AppBar(title: const Text('Profile Image')),
+      body: Center(child: Image.network(imageUrl)),
     );
   }
 }
