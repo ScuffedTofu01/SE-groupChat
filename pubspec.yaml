@@ -37,6 +37,7 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_staggered_animations: ^1.0.0
   swipe_to: 1.0.6
+  cached_video_player_plus: ^3.0.3
 
 dev_dependencies:
   flutter_test:

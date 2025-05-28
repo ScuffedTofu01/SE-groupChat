@@ -1,6 +1,6 @@
 import 'package:chatapp/enum/enum.dart';
 import 'package:chatapp/constant.dart';
-import 'package:chatapp/models/reply.dart'; 
+import 'package:chatapp/models/reply.dart';
 
 class MessageModel {
   final String senderUID;
@@ -18,7 +18,6 @@ class MessageModel {
   final List<String> isSeenBy;
   final List<String> deletedBy;
 
-
   MessageModel({
     required this.senderUID,
     required this.senderName,
@@ -35,7 +34,7 @@ class MessageModel {
     required this.isSeenBy,
     required this.deletedBy,
   });
-  
+
   Map<String, dynamic> toMap() {
     return {
       Constant.senderUID: senderUID,
@@ -55,28 +54,50 @@ class MessageModel {
     };
   }
 
- 
-  factory MessageModel.fromMap(Map<String, dynamic> map) {
+  factory MessageModel.fromMap(Map<String, dynamic>? map) {
+    if (map == null) {
+      // Provide safe defaults for all fields
+      return MessageModel(
+        senderUID: '',
+        senderName: '',
+        senderImage: '',
+        contactUID: '',
+        message: '',
+        messageType: MessageEnum.text,
+        timeSent: DateTime.now(),
+        messageId: '',
+        isSeen: false,
+        repliedMessage: '',
+        repliedTo: '',
+        repliedMessageType: MessageEnum.text,
+        isSeenBy: [],
+        deletedBy: [],
+      );
+    }
     return MessageModel(
       senderUID: map[Constant.senderUID] ?? '',
       senderName: map[Constant.senderName] ?? '',
       senderImage: map[Constant.senderImage] ?? '',
       contactUID: map[Constant.contactUID] ?? '',
       message: map[Constant.message] ?? '',
-      messageType: map[Constant.messageType].toString().toMessageEnum(),
-      timeSent: DateTime.fromMillisecondsSinceEpoch(map[Constant.timeSent]),
+      messageType:
+          (map[Constant.messageType]?.toString() ?? 'text').toMessageEnum(),
+      timeSent:
+          map[Constant.timeSent] != null
+              ? DateTime.fromMillisecondsSinceEpoch(map[Constant.timeSent])
+              : DateTime.now(),
       messageId: map[Constant.messageId] ?? '',
       isSeen: map[Constant.isSeen] ?? false,
       repliedMessage: map[Constant.repliedMessage] ?? '',
       repliedTo: map[Constant.repliedTo] ?? '',
       repliedMessageType:
-          map[Constant.repliedMessageType].toString().toMessageEnum(),
+          (map[Constant.repliedMessageType]?.toString() ?? 'text')
+              .toMessageEnum(),
       isSeenBy: List<String>.from(map[Constant.isSeenBy] ?? []),
       deletedBy: List<String>.from(map[Constant.deletedBy] ?? []),
     );
   }
 
- 
   MessageModel copyWith({
     String? senderUID,
     String? senderName,
@@ -122,5 +143,4 @@ class MessageModel {
       isMe: isMe,
     );
   }
-  
 }

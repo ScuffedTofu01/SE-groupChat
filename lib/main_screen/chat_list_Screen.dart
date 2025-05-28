@@ -97,6 +97,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
       appBar: AppBar(title: const Text('Chats')),
       body: Column(
@@ -125,105 +126,130 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       itemCount: _filteredFriends.length,
                       itemBuilder: (context, index) {
                         final friend = _filteredFriends[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 8,
-                          ),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[400], // Light blue background
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.shade900.withOpacity(0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
+                        return StreamBuilder<DocumentSnapshot>(
+                          stream:
+                              FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(friend['uid'])
+                                  .snapshots(),
+                          builder: (context, snapshot) {
+                            var friendData = friend;
+                            if (snapshot.hasData && snapshot.data!.exists) {
+                              friendData = {
+                                ...friend,
+                                ...?snapshot.data!.data()
+                                    as Map<String, dynamic>?,
+                              };
+                            }
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 8,
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              ProfileScreen(uid: friend['uid']),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[400],
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.shade900.withOpacity(
+                                      0.4,
                                     ),
-                                  );
-                                },
-                                child: CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage:
-                                      friend['image'] != null &&
-                                              friend['image']
-                                                  .toString()
-                                                  .isNotEmpty
-                                          ? NetworkImage(friend['image'])
-                                          : const AssetImage(
-                                                'assets/images/default_user.png',
-                                              )
-                                              as ImageProvider,
-                                ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      friend['name'] ?? 'Unknown',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      friend['email'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      formatLastSeen(friend['lastSeen']),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.message,
-                                  color: Colors.white,
-                                ),
-                                iconSize: 30,
-                                onPressed: () async {
-                                  Navigator.pushNamed(
-                                    context,
-                                    Constant.ChatScreen,
-                                    arguments: {
-                                      Constant.contactUID: friend['uid'],
-                                      Constant.contactName: friend['name'],
-                                      Constant.contactImage:
-                                          friend['image'] ?? '',
-                                      Constant.groupID: '',
+                              child: Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => ProfileScreen(
+                                                uid: friend['uid'],
+                                              ),
+                                        ),
+                                      );
                                     },
-                                  );
-                                },
+                                    child: CircleAvatar(
+                                      radius: 30,
+                                      backgroundImage:
+                                          friendData['image'] != null &&
+                                                  friendData['image']
+                                                      .toString()
+                                                      .isNotEmpty
+                                              ? NetworkImage(
+                                                friendData['image'],
+                                              )
+                                              : const AssetImage(
+                                                    'assets/images/default_user.png',
+                                                  )
+                                                  as ImageProvider,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          friendData['name'] ?? 'Unknown',
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          friendData['email'] ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          formatLastSeen(
+                                            friendData['lastSeen'],
+                                          ),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.message,
+                                      color: Colors.white,
+                                    ),
+                                    iconSize: 30,
+                                    onPressed: () async {
+                                      Navigator.pushNamed(
+                                        context,
+                                        Constant.ChatScreen,
+                                        arguments: {
+                                          Constant.contactUID: friend['uid'],
+                                          Constant.contactName: friend['name'],
+                                          Constant.contactImage:
+                                              friend['image'] ?? '',
+                                          Constant.groupID: '',
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         );
                       },
                     ),

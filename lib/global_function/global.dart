@@ -1,20 +1,24 @@
 import 'dart:io';
 
+import 'package:chatapp/enum/enum.dart';
 import 'package:chatapp/models/user_model.dart';
 import 'package:chatapp/utilities/asset_manager.dart';
+import 'package:chatapp/widget/friend_list.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../main_screen/view_friend_request_page.dart';
 
 class AddButton extends StatelessWidget {
   final String label;
   final Function()? onTap;
-  const AddButton({super.key, required this.label, required this.onTap}); 
-  
+  const AddButton({super.key, required this.label, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -30,13 +34,11 @@ class AddButton extends StatelessWidget {
           child: Text(
             label,
             style: GoogleFonts.lato(
-              color: Colors.white, 
-              fontSize: 16, 
+              color: Colors.white,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               letterSpacing: 1,
               wordSpacing: 1,
-              
-              
             ),
           ),
         ),
@@ -72,10 +74,10 @@ class InputField extends StatelessWidget {
               title,
               style: GoogleFonts.lato(
                 fontSize: 16,
-                fontWeight: FontWeight.w500
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),        
+          ),
           Container(
             height: 48,
             margin: const EdgeInsets.only(top: 5),
@@ -88,10 +90,9 @@ class InputField extends StatelessWidget {
             ),
             child: Row(
               children: [
-            
                 Expanded(
                   child: TextFormField(
-                    readOnly: widget==null?false:true,
+                    readOnly: widget == null ? false : true,
                     autofocus: false,
                     cursorColor: Colors.blue,
                     controller: controller,
@@ -107,12 +108,14 @@ class InputField extends StatelessWidget {
                         fontWeight: FontWeight.w300,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                      border: InputBorder.none, 
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10), 
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
                     ),
                   ),
                 ),
-                widget==null?Container():Container(child: widget)
+                widget == null ? Container() : Container(child: widget),
               ],
             ),
           ),
@@ -149,11 +152,7 @@ void showCustomSnackbar({
     colorText: Theme.of(context).colorScheme.onPrimary,
     snackPosition: SnackPosition.BOTTOM,
     backgroundColor: backgroundColor,
-    icon: Icon(
-      icon,
-      color: Theme.of(context).colorScheme.onPrimary,
-      size: 30,
-    ),
+    icon: Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 30),
     margin: const EdgeInsets.only(bottom: 10, left: 5, right: 5),
   );
 }
@@ -168,9 +167,10 @@ Widget userImageWidget({
     child: CircleAvatar(
       radius: radius,
       backgroundColor: Colors.grey[300],
-      backgroundImage: imageUrl.isNotEmpty
-          ? CachedNetworkImageProvider(imageUrl)
-          : const AssetImage(AssetManager.userImage) as ImageProvider,
+      backgroundImage:
+          imageUrl.isNotEmpty
+              ? CachedNetworkImageProvider(imageUrl)
+              : const AssetImage(AssetManager.userImage) as ImageProvider,
     ),
   );
 }
@@ -181,10 +181,10 @@ Future<File?> pickImage({
 }) async {
   File? fileImage;
   if (fromCamera) {
-    
     try {
-      final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.camera);
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+      );
       if (pickedFile == null) {
         onFail('No image selected');
       } else {
@@ -194,10 +194,10 @@ Future<File?> pickImage({
       onFail(e.toString());
     }
   } else {
-    
     try {
-      final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+      );
       if (pickedFile == null) {
         onFail('No image selected');
       } else {
@@ -226,23 +226,22 @@ Widget friendRequestButton({
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ViewFriendRequestPage(currentUserUID: currentUser.uid),
+              builder:
+                  (context) =>
+                      ViewFriendRequestPage(currentUserUID: currentUser.uid),
             ),
           );
         },
         child: Text(
           'View Friend Requests',
-          style: GoogleFonts.lato(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       );
     } else {
       return const Text('No friend requests available.');
     }
   } else {
-    return const SizedBox(); 
+    return const SizedBox();
   }
 }
 
@@ -257,14 +256,132 @@ Future<void> fetchDataWithRetry({
   while (retryCount < maxRetries) {
     try {
       await fetchFunction();
-      return; // Exit the loop if the fetch is successful
+      return;
     } catch (e) {
       if (retryCount == maxRetries - 1) {
-        rethrow; // Rethrow the error if max retries are reached
+        rethrow;
       }
       await Future.delayed(delay);
-      delay *= 2; // Double the delay for exponential backoff
+      delay *= 2;
       retryCount++;
     }
   }
+}
+
+Future<void> showMyAnimatedDialog({
+  required BuildContext context,
+  required String title,
+  required String content,
+  required String textAction,
+  required Function(bool) onActionTap,
+}) async {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: false, // user must tap button!
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black54, // Standard barrier color
+    transitionDuration: const Duration(milliseconds: 300), // Animation duration
+    pageBuilder: (
+      BuildContext buildContext,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+    ) {
+      // This is the dialog content
+      return AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: ListBody(children: <Widget>[Text(content)]),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.of(
+                buildContext,
+              ).pop(); // Use buildContext from pageBuilder
+              onActionTap(false);
+            },
+          ),
+          TextButton(
+            child: Text(textAction),
+            onPressed: () {
+              Navigator.of(
+                buildContext,
+              ).pop(); // Use buildContext from pageBuilder
+              onActionTap(true);
+            },
+          ),
+        ],
+      );
+    },
+    transitionBuilder: (
+      BuildContext buildContext,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+    ) {
+      // Simple Fade Transition
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+}
+
+String formatDate(DateTime dateTime) {
+  return DateFormat('hh:mm a').format(dateTime);
+}
+
+void showAddMembersBottomSheet({
+  required BuildContext context,
+  required List<String> groupMembersUIDs,
+}) {
+  showModalBottomSheet(
+    context: context,
+    builder: (context) {
+      return SizedBox(
+        height: double.infinity,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: CupertinoSearchTextField(
+                      onChanged: (value) {
+                        // search for users
+                      },
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // close bottom sheet
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(thickness: 2, color: Colors.grey),
+            Expanded(
+              child: FriendsList(
+                viewType: FriendViewType.groupView,
+                groupMembersUIDs: groupMembersUIDs,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

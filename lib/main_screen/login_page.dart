@@ -33,7 +33,6 @@ class LoginPage extends StatelessWidget {
     );
 
     if (result == null) {
-      // Navigate to OpeningScreen after successful sign-up
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const OpeningScreen()),
       );

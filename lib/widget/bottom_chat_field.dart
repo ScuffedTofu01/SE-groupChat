@@ -114,7 +114,6 @@ class _BottomChatFieldState extends State<BottomChatField> {
   void _sendFile() {
     if (_pickedFilePreview == null || _pickedFileType == null) return;
 
-    // Fetch currentUser here as it's specific to this action and uses context
     final currentUser = context.read<AuthenticationProvider>().userModel;
 
     if (currentUser == null) {
@@ -130,24 +129,28 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
     final MessageModel? replyingToMessage = widget.replyingTo;
 
+    final fileToSend = _pickedFilePreview;
+    final fileTypeToSend = _pickedFileType;
+
+    setState(() {
+      _pickedFilePreview = null;
+      _pickedFileType = null;
+    });
+
     // Use the class member chatProvider
     chatProvider.sendFileMessage(
       sender: currentUser,
       contactUID: widget.contactUID,
       contactName: widget.chatName,
       contactImage: widget.chatImage,
-      file: _pickedFilePreview!,
-      messageType: _pickedFileType!,
+      file: fileToSend!,
+      messageType: fileTypeToSend!,
       groupId: widget.groupID,
       repliedMessage: replyingToMessage?.message ?? '',
       repliedTo: replyingToMessage?.senderName ?? '',
       repliedMessageType: replyingToMessage?.messageType ?? MessageEnum.text,
       onSuccess: () {
         if (!mounted) return;
-        setState(() {
-          _pickedFilePreview = null;
-          _pickedFileType = null;
-        });
       },
       onError: (error) {
         if (!mounted) return;
@@ -160,9 +163,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
     );
   }
 
-  // Moved _buildFilePreview inside the state class
   Widget _buildFilePreviewWidget() {
-    // Renamed to avoid conflict with potential Flutter internal methods
     if (_pickedFilePreview == null) {
       return const SizedBox.shrink();
     }
@@ -177,9 +178,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
         children: [
           Expanded(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxHeight: 100, // Max height for the preview
-              ),
+              constraints: const BoxConstraints(maxHeight: 80),
               child:
                   _pickedFileType == MessageEnum.image
                       ? Image.file(_pickedFilePreview!, fit: BoxFit.contain)

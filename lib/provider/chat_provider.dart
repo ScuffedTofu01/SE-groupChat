@@ -472,11 +472,13 @@ class ChatProvider extends ChangeNotifier {
 
           final contactMessageRef = _firestore
               .collection(Constant.users)
-              .doc(chatId) // The contact's UID
+              .doc(chatId)
               .collection(Constant.chats)
-              .doc(userId) // My UID (as the contact in their chat list)
+              .doc(userId)
               .collection(Constant.messages)
-              .doc(doc.id); // The same message ID
+              .doc(doc.id);
+
+          batch.update(contactMessageRef, {Constant.isSeen: true});
         }
         await batch.commit();
       }
@@ -486,6 +488,44 @@ class ChatProvider extends ChangeNotifier {
       );
       debugPrint(stackTrace.toString());
       // Decide if you want to rethrow or handle silently
+    }
+  }
+
+  Stream<int> getUnreadMessagesStream({
+    required String userId,
+    required String contactUID,
+    required bool isGroup,
+  }) {
+    // 1. check if its a group message
+    if (isGroup) {
+      // handle group message
+      return _firestore
+          .collection(Constant.groups)
+          .doc(contactUID)
+          .collection(Constant.messages)
+          .snapshots()
+          .asyncMap((event) {
+            int count = 0;
+            for (var doc in event.docs) {
+              final message = MessageModel.fromMap(doc.data());
+              if (!message.isSeenBy.contains(userId)) {
+                count++;
+              }
+            }
+            return count;
+          });
+    } else {
+      // handle contact message
+      return _firestore
+          .collection(Constant.users)
+          .doc(userId)
+          .collection(Constant.chats)
+          .doc(contactUID)
+          .collection(Constant.messages)
+          .where(Constant.isSeen, isEqualTo: false)
+          .where(Constant.senderUID, isNotEqualTo: userId)
+          .snapshots()
+          .map((event) => event.docs.length);
     }
   }
 }

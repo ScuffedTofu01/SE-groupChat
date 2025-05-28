@@ -1,12 +1,15 @@
 import 'dart:async';
 
+import 'package:chatapp/constant.dart';
 import 'package:chatapp/global_function/global.dart';
 import 'package:chatapp/main_screen/profile_screen.dart';
+import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 class AddFriendPage extends StatefulWidget {
   const AddFriendPage({super.key});
@@ -369,139 +372,146 @@ class _AddFriendPageState extends State<AddFriendPage> {
 
   void _acceptFriendRequest(String friendUID) async {
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
+      await context.read<AuthenticationProvider>().acceptFriendRequest(
+        friendUID,
+      );
 
-      if (currentUser == null) {
-        throw Exception('User is not logged in.');
+      if (mounted) {
+        setState(() {
+          _friendRequests.remove(friendUID);
+          _totalFriendRequests = _friendRequests.length; // Update count
+        });
+        showCustomSnackbar(
+          context: context,
+          title: "Success",
+          message: "Friend request accepted!",
+          backgroundColor: Colors.green,
+          icon: Icons.check_circle,
+        );
       }
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .update({
-            'friendUID': FieldValue.arrayUnion([friendUID]),
-            'friendRequestUID': FieldValue.arrayRemove([friendUID]),
-          });
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(friendUID)
-          .update({
-            'friendUID': FieldValue.arrayUnion([currentUser.uid]),
-          });
-
-      setState(() {
-        _friendRequests.remove(friendUID);
-      });
-
-      showCustomSnackbar(
-        context: context,
-        title: "Success",
-        message: "Friend request accepted!",
-        backgroundColor: Colors.green,
-        icon: Icons.check_circle,
-      );
     } catch (e) {
-      print('Error accepting friend request: $e');
-      showCustomSnackbar(
-        context: context,
-        title: "Error",
-        message: "Error accepting friend request: $e",
-        backgroundColor: Colors.red,
-        icon: Icons.error_outline,
-      );
+      if (mounted) {
+        showCustomSnackbar(
+          context: context,
+          title: "Error",
+          message: e.toString(),
+          backgroundColor: Colors.red,
+          icon: Icons.error_outline,
+        );
+      }
+      print('Error accepting friend request on page: $e');
     }
   }
 
   void _rejectFriendRequest(String friendUID) async {
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-
-      if (currentUser == null) {
-        throw Exception('User is not logged in.');
+      await context.read<AuthenticationProvider>().rejectFriendRequest(
+        friendUID,
+      );
+      if (mounted) {
+        setState(() {
+          _friendRequests.remove(friendUID);
+          _totalFriendRequests = _friendRequests.length; // Update count
+        });
+        showCustomSnackbar(
+          context: context,
+          title: "Success",
+          message: "Friend request rejected!",
+          backgroundColor: Colors.orange,
+          icon: Icons.cancel,
+        );
       }
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .update({
-            'friendRequestUID': FieldValue.arrayRemove([friendUID]),
-          });
-
-      setState(() {
-        _friendRequests.remove(friendUID);
-      });
-
-      showCustomSnackbar(
-        context: context,
-        title: "Success",
-        message: "Friend request rejected!",
-        backgroundColor: Colors.orange,
-        icon: Icons.cancel,
-      );
     } catch (e) {
-      print('Error rejecting friend request: $e');
-      showCustomSnackbar(
-        context: context,
-        title: "Error",
-        message: "Error rejecting friend request: $e",
-        backgroundColor: Colors.red,
-        icon: Icons.error_outline,
-      );
+      if (mounted) {
+        showCustomSnackbar(
+          context: context,
+          title: "Error",
+          message: e.toString(),
+          backgroundColor: Colors.red,
+          icon: Icons.error_outline,
+        );
+      }
+      print('Error rejecting friend request on page: $e');
     }
   }
 
   Future<void> sendFriendRequest(String targetEmail) async {
+    String? targetUserUID;
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-
-      if (currentUser == null) {
-        throw Exception('User is not logged in.');
-      }
-
       final querySnapshot =
           await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: targetEmail)
+              .collection(Constant.users)
+              .where(Constant.email, isEqualTo: targetEmail)
+              .limit(1)
               .get();
 
-      if (querySnapshot.docs.isEmpty) {
-        throw Exception('No user found with this email.');
+      if (querySnapshot.docs.isNotEmpty) {
+        targetUserUID = querySnapshot.docs.first.id;
+        if (targetUserUID ==
+            context.read<AuthenticationProvider>().userModel?.uid) {
+          if (mounted) {
+            showCustomSnackbar(
+              context: context,
+              title: "Info",
+              message: "You cannot send a friend request to yourself.",
+              backgroundColor: Colors.orange,
+              icon: Icons.info_outline,
+            );
+          }
+          return;
+        }
+      } else {
+        if (mounted) {
+          showCustomSnackbar(
+            context: context,
+            title: "Not Found",
+            message: "No user found with this email.",
+            backgroundColor: Colors.orange,
+            icon: Icons.search_off,
+          );
+        }
+        return;
       }
-
-      final targetUser = querySnapshot.docs.first;
-      final targetUserUID = targetUser.id;
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .update({
-            'sentFriendRequestUID': FieldValue.arrayUnion([targetUserUID]),
-          });
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(targetUserUID)
-          .update({
-            'friendRequestUID': FieldValue.arrayUnion([currentUser.uid]),
-          });
-
-      showCustomSnackbar(
-        context: context,
-        title: "Success",
-        message: "Friend request sent!",
-        backgroundColor: Colors.green,
-        icon: Icons.check_circle,
-      );
     } catch (e) {
-      print('Error sending friend request: $e');
-      showCustomSnackbar(
-        context: context,
-        title: "Error",
-        message: "Error sending friend request: $e",
-        backgroundColor: Colors.red,
-        icon: Icons.error_outline,
-      );
+      if (mounted) {
+        showCustomSnackbar(
+          context: context,
+          title: "Error",
+          message: "Error searching for user: $e",
+          backgroundColor: Colors.red,
+          icon: Icons.error_outline,
+        );
+      }
+      return;
+    }
+
+    if (targetUserUID != null) {
+      try {
+        await context.read<AuthenticationProvider>().sendFriendRequest(
+          targetUserUID,
+        );
+        if (mounted) {
+          showCustomSnackbar(
+            context: context,
+            title: "Success",
+            message: "Friend request sent!",
+            backgroundColor: Colors.green,
+            icon: Icons.check_circle,
+          );
+          _emailController.clear(); // Clear input field
+        }
+      } catch (e) {
+        if (mounted) {
+          showCustomSnackbar(
+            context: context,
+            title: "Error",
+            message: e.toString(),
+            backgroundColor: Colors.red,
+            icon: Icons.error_outline,
+          );
+        }
+        print('Error sending friend request on page: $e');
+      }
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '/constant.dart';
@@ -65,6 +66,24 @@ class AuthenticationProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       _handleAuthError(context, e);
       return e.message;
+    } on PlatformException catch (e) {
+      showCustomSnackbar(
+        context: context,
+        title: "Sign-In Error",
+        message: e.message ?? "An unknown platform error occurred.",
+        backgroundColor: Colors.red,
+        icon: Icons.error,
+      );
+      return e.message;
+    } catch (e) {
+      showCustomSnackbar(
+        context: context,
+        title: "Unexpected Error",
+        message: "An unexpected error occurred: ${e.toString()}",
+        backgroundColor: Colors.red,
+        icon: Icons.error,
+      );
+      return "An unexpected error occurred.";
     } finally {
       _setLoading(false);
     }
@@ -163,6 +182,12 @@ class AuthenticationProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateLastSeen(String uid) async {
+    await _firestore.collection(Constant.users).doc(uid).update({
+      'lastSeen': DateTime.now(),
+    });
+  }
+
   Future<bool> checkAuthenticationState() async {
     await Future.delayed(const Duration(seconds: 2));
     if (_auth.currentUser != null) {
@@ -186,6 +211,13 @@ class AuthenticationProvider extends ChangeNotifier {
 
   void _handleAuthError(BuildContext context, FirebaseAuthException e) {
     _isSuccessful = false;
+    showCustomSnackbar(
+      context: context,
+      title: "Authentication Error",
+      message: e.message ?? "An unknown error occurred.",
+      backgroundColor: Colors.red,
+      icon: Icons.error,
+    );
   }
 
   Future<void> _saveUserToLocal() async {
@@ -255,5 +287,218 @@ class AuthenticationProvider extends ChangeNotifier {
 
   Stream<DocumentSnapshot> userStream({required String userID}) {
     return _firestore.collection(Constant.users).doc(userID).snapshots();
+  }
+
+  Future<void> acceptFriendRequest(String friendUID) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final currentUser = _auth.currentUser;
+
+      if (currentUser == null) {
+        _isSuccessful = false;
+        throw Exception('User is not logged in.');
+      }
+
+      final String currentUserID = currentUser.uid;
+
+      WriteBatch batch = _firestore.batch();
+
+      DocumentReference currentUserDocRef = _firestore
+          .collection(Constant.users)
+          .doc(currentUserID);
+      batch.update(currentUserDocRef, {
+        Constant.friendUID: FieldValue.arrayUnion([friendUID]),
+        Constant.friendRequestUID: FieldValue.arrayRemove([friendUID]),
+      });
+
+      DocumentReference friendUserDocRef = _firestore
+          .collection(Constant.users)
+          .doc(friendUID);
+      batch.update(friendUserDocRef, {
+        Constant.friendUID: FieldValue.arrayUnion([currentUserID]),
+        Constant.sentFriendRequestUID: FieldValue.arrayRemove([currentUserID]),
+      });
+
+      await batch.commit();
+
+      _isSuccessful = true;
+    } catch (e) {
+      _isSuccessful = false;
+
+      throw Exception('Failed to accept friend request. Please try again.');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectFriendRequest(String friendUID) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        _isSuccessful = false;
+        throw Exception('User is not logged in.');
+      }
+      final String currentUserID = currentUser.uid;
+
+      await _firestore.collection(Constant.users).doc(currentUserID).update({
+        Constant.friendRequestUID: FieldValue.arrayRemove([friendUID]),
+      });
+
+      // Also, the sender (friendUID) should have currentUserID removed from their sentFriendRequestUID list
+      await _firestore.collection(Constant.users).doc(friendUID).update({
+        Constant.sentFriendRequestUID: FieldValue.arrayRemove([currentUserID]),
+      });
+      _isSuccessful = true;
+    } catch (e) {
+      _isSuccessful = false;
+      print('Error rejecting friend request in AuthProvider: $e');
+      throw Exception('Failed to reject friend request. Please try again.');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendFriendRequest(String targetUserUID) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        _isSuccessful = false;
+        throw Exception('User is not logged in.');
+      }
+      final String currentUserID = currentUser.uid;
+
+      // Add targetUserUID to current user's sentFriendRequestUID list
+      await _firestore.collection(Constant.users).doc(currentUserID).update({
+        Constant.sentFriendRequestUID: FieldValue.arrayUnion([targetUserUID]),
+      });
+
+      // Add currentUserID to target user's friendRequestUID list
+      await _firestore.collection(Constant.users).doc(targetUserUID).update({
+        Constant.friendRequestUID: FieldValue.arrayUnion([currentUserID]),
+      });
+      _isSuccessful = true;
+    } catch (e) {
+      _isSuccessful = false;
+      print('Error sending friend request in AuthProvider: $e');
+      throw Exception('Failed to send friend request. Please try again.');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<UserModel>> getFriendsList(
+    String uid,
+    List<String> groupMembersUIDs,
+  ) async {
+    List<UserModel> friendsList = [];
+
+    DocumentSnapshot documentSnapshot =
+        await _firestore.collection(Constant.users).doc(uid).get();
+
+    List<dynamic> friendUID = documentSnapshot.get(Constant.friendUID);
+
+    for (String friendUID in friendUID) {
+      // if groupMembersUIDs list is not empty and contains the friendUID we skip this friend
+      if (groupMembersUIDs.isNotEmpty && groupMembersUIDs.contains(friendUID)) {
+        continue;
+      }
+      DocumentSnapshot documentSnapshot =
+          await _firestore.collection(Constant.users).doc(friendUID).get();
+      UserModel friend = UserModel.fromMap(
+        documentSnapshot.data() as Map<String, dynamic>,
+      );
+      friendsList.add(friend);
+    }
+
+    return friendsList;
+  }
+
+  Future<void> removeFriend({required String friendID}) async {
+    // remove our uid from friends list
+    await _firestore.collection(Constant.users).doc(friendID).update({
+      Constant.friendUID: FieldValue.arrayRemove([_uid]),
+    });
+
+    // remove friend uid from our friends list
+    await _firestore.collection(Constant.users).doc(_uid).update({
+      Constant.friendUID: FieldValue.arrayRemove([friendID]),
+    });
+  }
+
+  Future<void> cancelFriendRequest({required String friendID}) async {
+    try {
+      // remove our uid from friends request list
+      await _firestore.collection(Constant.users).doc(friendID).update({
+        Constant.friendRequestUID: FieldValue.arrayRemove([_uid]),
+      });
+
+      // remove friend uid from our friend requests sent list
+      await _firestore.collection(Constant.users).doc(_uid).update({
+        Constant.sentFriendRequestUID: FieldValue.arrayRemove([friendID]),
+      });
+    } on FirebaseException catch (e) {
+      print(e);
+    }
+  }
+
+  // get a list of friend requests
+  Future<List<UserModel>> getFriendRequestsList({
+    required String uid,
+    required String groupId,
+  }) async {
+    List<UserModel> friendRequestsList = [];
+
+    if (groupId.isNotEmpty) {
+      DocumentSnapshot documentSnapshot =
+          await _firestore.collection(Constant.groups).doc(groupId).get();
+
+      List<dynamic> requestsUIDs = documentSnapshot.get(
+        Constant.awaitingApprovalUIDs,
+      );
+
+      for (String friendRequestUID in requestsUIDs) {
+        DocumentSnapshot documentSnapshot =
+            await _firestore
+                .collection(Constant.users)
+                .doc(friendRequestUID)
+                .get();
+        UserModel friendRequest = UserModel.fromMap(
+          documentSnapshot.data() as Map<String, dynamic>,
+        );
+        friendRequestsList.add(friendRequest);
+      }
+
+      return friendRequestsList;
+    }
+
+    DocumentSnapshot documentSnapshot =
+        await _firestore.collection(Constant.users).doc(uid).get();
+
+    List<dynamic> friendRequestsUIDs = documentSnapshot.get(
+      Constant.friendRequestUID,
+    );
+
+    for (String friendRequestUID in friendRequestsUIDs) {
+      DocumentSnapshot documentSnapshot =
+          await _firestore
+              .collection(Constant.users)
+              .doc(friendRequestUID)
+              .get();
+      UserModel friendRequest = UserModel.fromMap(
+        documentSnapshot.data() as Map<String, dynamic>,
+      );
+      friendRequestsList.add(friendRequest);
+    }
+
+    return friendRequestsList;
   }
 }

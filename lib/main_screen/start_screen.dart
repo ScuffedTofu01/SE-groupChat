@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:adaptive_theme/adaptive_theme.dart';
+import 'package:chatapp/constant.dart';
+import 'package:chatapp/main_screen/private_group_screen.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:get/get.dart';
 import '/main_screen/setting_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,7 +18,6 @@ import 'schedule_screen.dart';
 import '/utilities/asset_manager.dart';
 import '/provider/authentication_provider.dart';
 
-
 class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
 
@@ -22,7 +25,7 @@ class StartScreen extends StatefulWidget {
   State<StartScreen> createState() => _StartScreenState();
 }
 
-class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver{
+class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver {
   final PageController pageController = PageController(initialPage: 0);
 
   bool isDarkTheme = false;
@@ -31,11 +34,12 @@ class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver{
   bool isLoading = true;
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot>? _userDetailsSubscription;
+  Timer? _lastSeenTimer;
 
   final List<Widget> pages = const [
     HomeScreen(),
     ChatListScreen(),
-    GroupListScreen(),
+    PrivateGroupScreen(),
     ScheduleScreen(),
     SettingScreen(),
   ];
@@ -47,41 +51,53 @@ class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver{
     });
   }
 
-void _listenToUserDetails() {
-  _userDetailsSubscription?.cancel();
+  void _listenToUserDetails() {
+    _userDetailsSubscription?.cancel();
 
-  User? user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    setState(() {
-      isLoading = true; 
-    });
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        isLoading = true;
+      });
 
-    _userDetailsSubscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .snapshots()
-        .listen((userDoc) {
-          if (!mounted) return;
-          if (userDoc.exists) {
-            Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-            setState(() {
-              userImage = userData['image'];
-              isLoading = false; 
-            });
-          } else {
-            setState(() {
-              userImage = null;
-              isLoading = false; 
-            });
-          }
-        });
-  } else {
-    setState(() {
-      userImage = null;
-      isLoading = false; 
-    });
+      _userDetailsSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((userDoc) {
+            if (!mounted) return;
+            if (userDoc.exists) {
+              Map<String, dynamic> userData =
+                  userDoc.data() as Map<String, dynamic>;
+              setState(() {
+                userImage = userData['image'];
+                isLoading = false;
+              });
+            } else {
+              setState(() {
+                userImage = null;
+                isLoading = false;
+              });
+            }
+          });
+    } else {
+      setState(() {
+        userImage = null;
+        isLoading = false;
+      });
+    }
   }
-}
+
+  FloatingActionButtonLocation _getFabLocation(int index) {
+    switch (index) {
+      case 0:
+        return FloatingActionButtonLocation.startDocked;
+      case 2:
+        return FloatingActionButtonLocation.centerDocked;
+      default:
+        return FloatingActionButtonLocation.endFloat;
+    }
+  }
 
   @override
   void initState() {
@@ -90,50 +106,59 @@ void _listenToUserDetails() {
     getThemeMode();
 
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if(!mounted) return;
+      if (!mounted) return;
       if (user == null) {
-       setState(() {
-        userImage = null;
-        isLoading = false;
-       });
-    } else {
-      setState(() {
-        isLoading = true;
-      });
-      _listenToUserDetails();
-    }
+        setState(() {
+          userImage = null;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = true;
+        });
+        _listenToUserDetails();
+      }
+    });
+
+    _startLastSeenUpdater();
   }
-  );
-}
 
-@override
-void dispose() {
-  _authSubscription?.cancel(); 
-  _userDetailsSubscription?.cancel(); 
-  WidgetsBinding.instance.removeObserver(this);
-  super.dispose();
-}
+  void _startLastSeenUpdater() {
+    _lastSeenTimer?.cancel();
+    _lastSeenTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'lastSeen': FieldValue.serverTimestamp()});
+      }
+    });
+  }
 
- @override
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _userDetailsSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state); // Call super
+    super.didChangeAppLifecycleState(state);
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       if (state == AppLifecycleState.resumed) {
-        // App is active and in the foreground
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({'lastSeen': FieldValue.serverTimestamp()});
+        FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'lastSeen': FieldValue.serverTimestamp(),
+        });
       } else if (state == AppLifecycleState.inactive ||
-                 state == AppLifecycleState.paused ||
-                 state == AppLifecycleState.detached) {
-        // App is going into the background, being closed, or is inactive
-        // Update lastSeen to the current time
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({'lastSeen': FieldValue.serverTimestamp()});
+          state == AppLifecycleState.paused ||
+          state == AppLifecycleState.detached) {
+        FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'lastSeen': FieldValue.serverTimestamp(),
+        });
       }
     }
   }
@@ -141,6 +166,35 @@ void dispose() {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthenticationProvider>(context);
+
+    Widget? fab;
+    if (currentIndex == 2) {
+      fab = FloatingActionButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/createGroupScreen');
+        },
+        child: const Icon(Icons.add),
+        tooltip: 'Create Group',
+      );
+    } else if (currentIndex == 1) {
+      fab = FloatingActionButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/addFriendPage');
+        },
+        child: const Icon(Icons.person_add),
+        tooltip: 'Add Friend',
+      );
+    } else if (currentIndex == 0) {
+      fab = FloatingActionButton(
+        onPressed: () {
+          Get.toNamed(Constant.AddEventPage);
+        },
+        child: const Icon(CupertinoIcons.calendar_badge_plus),
+        tooltip: 'Create Event',
+      );
+    } else {
+      fab = null;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -157,53 +211,55 @@ void dispose() {
           Padding(
             padding: const EdgeInsets.only(top: 15, right: 10.0),
             child: GestureDetector(
-         onTap: () {
-            final userId = authProvider.userModel?.uid;
-            if (userId != null) {
-              debugPrint('Navigating to ProfileScreen with userId: $userId');
-              Navigator.pushNamed(
-                context,
-                '/profileScreen',
-                arguments: userId,
-               );
-              } else {
-                debugPrint('Error: User ID is null');
-                ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Unable to load profile. User ID is missing.')
-                  ),
-                );
+              onTap: () {
+                final userId = authProvider.userModel?.uid;
+                if (userId != null) {
+                  debugPrint(
+                    'Navigating to ProfileScreen with userId: $userId',
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    '/profileScreen',
+                    arguments: userId,
+                  );
+                } else {
+                  debugPrint('Error: User ID is null');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Unable to load profile. User ID is missing.',
+                      ),
+                    ),
+                  );
                 }
               },
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   if (isLoading)
-                    const CircularProgressIndicator(
-                      color: Colors.lightBlue,
-                    ),
+                    const CircularProgressIndicator(color: Colors.lightBlue),
 
-                  if(!isLoading) 
-                  ClipOval(
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        image: DecorationImage(
-                          image: userImage != null
-                              ? NetworkImage(
-                                  '$userImage?timestamp=${DateTime.now().millisecondsSinceEpoch}')
-                              : const AssetImage(AssetManager.userImage)
-                                  as ImageProvider,
-                          fit: BoxFit.contain,
+                  if (!isLoading)
+                    ClipOval(
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image:
+                                userImage != null
+                                    ? NetworkImage(
+                                      '$userImage?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                                    )
+                                    : const AssetImage(AssetManager.userImage)
+                                        as ImageProvider,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
-
-
               ),
             ),
           ),
@@ -218,18 +274,34 @@ void dispose() {
         },
         children: pages,
       ),
+      floatingActionButton: fab,
+      floatingActionButtonLocation: _getFabLocation(currentIndex),
+
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.groups_2_rounded), label: 'Group'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: 'Schedule'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_outlined),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.groups_2_rounded),
+            label: 'Group',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month_outlined),
+            label: 'Schedule',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
         ],
         currentIndex: currentIndex,
         onTap: (index) {
-          pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
           setState(() {
             currentIndex = index;
           });

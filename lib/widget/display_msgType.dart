@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatapp/widget/video_palayer_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:chatapp/enum/enum.dart';
 
@@ -88,14 +89,22 @@ class DisplayMessageType extends StatelessWidget {
         }
         break;
       case MessageEnum.video:
-        messageToShow = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.videocam_rounded, color: color, size: isReply ? 16 : 20),
-            const SizedBox(width: 8),
-            Text('Video', style: textStyle),
-          ],
-        );
+        if (isReply) {
+          messageToShow = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.videocam, color: color, size: isReply ? 16 : 20),
+              const SizedBox(width: 4),
+              Text('Video', style: textStyle),
+            ],
+          );
+        } else {
+          messageToShow = VideoPlayerWidget(
+            videoUrl: message,
+            color: color, // Or a specific color for controls
+            viewOnly: false, // Allow playback controls
+          );
+        }
         break;
       case MessageEnum.audio:
         messageToShow = Row(

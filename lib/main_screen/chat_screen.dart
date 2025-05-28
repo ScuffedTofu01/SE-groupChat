@@ -1,4 +1,5 @@
 import 'package:chatapp/constant.dart';
+import 'package:chatapp/global_function/global.dart';
 import 'package:chatapp/models/message.dart';
 import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:chatapp/provider/chat_provider.dart';
@@ -25,7 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   late final String contactUID;
   late final String contactName;
   late final String contactImage;
-  late final String groupId;
+  late final String groupID;
   late final bool isGroupChat;
   late final String chatName;
   late final String chatImage;
@@ -39,28 +40,32 @@ class _ChatScreenState extends State<ChatScreen> {
     uid =
         context.read<AuthenticationProvider>().userModel!.uid; // Initialize uid
 
-    // Initialize contact and group info from arguments
     contactUID = arguments[Constant.contactUID] ?? '';
     contactName = arguments[Constant.contactName] ?? '';
     contactImage = arguments[Constant.contactImage] ?? '';
-    groupId = arguments[Constant.groupID] ?? '';
-    isGroupChat = groupId.isNotEmpty;
+    groupID = arguments[Constant.groupID] ?? '';
+    isGroupChat = groupID.isNotEmpty;
 
     chatName =
         isGroupChat ? arguments['groupName'] ?? 'Group Chat' : contactName;
     chatImage = isGroupChat ? arguments['groupImage'] ?? '' : contactImage;
 
     context.read<ChatProvider>().setCurrentActualUserId(uid);
+    context.read<AuthenticationProvider>().updateLastSeen(uid);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (!mounted) return;
+
+      // defer the heavy write until after the first frame
+      Future.microtask(() {
         context.read<ChatProvider>().markMessagesAsSeen(
           userId: uid,
-          chatId: isGroupChat ? groupId : contactUID,
+          chatId: isGroupChat ? groupID : contactUID,
           isGroup: isGroupChat,
         );
-        _scrollToBottom();
-      }
+      });
+
+      _scrollToBottom();
     });
   }
 
@@ -81,6 +86,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottomInternal() {
+    // ... existing _scrollToBottomInternal code ...
     print(
       "ChatScroll_Debug: Attempting scroll. MaxScrollExtent before delay: ${_scrollController.position.maxScrollExtent}, Pixels: ${_scrollController.position.pixels}",
     );
@@ -128,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Navigator.pushNamed(
                     context,
                     '/groupInfoScreen',
-                    arguments: groupId,
+                    arguments: groupID,
                   );
                 } else {
                   Navigator.pushNamed(
@@ -160,7 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: StreamBuilder<List<MessageModel>>(
               stream: context.read<ChatProvider>().getMessagesStream(
                 userId: uid,
-                contactUID: contactUID,
+                contactUID: isGroupChat ? groupID : contactUID,
                 isGroup: isGroupChat,
               ),
               builder: (
@@ -175,15 +181,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
                 final messages = snapshot.data!;
 
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    // Ensure widget is still mounted
-                    _scrollToBottom();
-                  }
-                });
-
                 return ListView.builder(
-                  controller: _scrollController, // <<< --- ADD THIS LINE ---
+                  controller: _scrollController,
                   reverse: false,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -251,10 +250,26 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               ),
                             ),
-                          MessageBubble(
-                            message: message,
-                            isMe: isMe,
-                            isGroupChat: isGroupChat,
+                          GestureDetector(
+                            onLongPress: () {
+                              if (isMe) {
+                                showMyAnimatedDialog(
+                                  context: context,
+                                  title: 'Delete Message',
+                                  content:
+                                      'Are you sure you want to delete this message?',
+                                  textAction: 'Delete',
+                                  onActionTap: (confirmed) {
+                                    // Implement delete logic if confirmed
+                                  },
+                                );
+                              }
+                            },
+                            child: MessageBubble(
+                              message: message,
+                              isMe: isMe,
+                              isGroupChat: isGroupChat,
+                            ),
                           ),
                         ],
                       ),
@@ -270,7 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
               contactUID: contactUID,
               chatName: chatName,
               chatImage: chatImage,
-              groupID: groupId,
+              groupID: groupID,
               replyingTo: _replyingTo,
               onCancelReply: () {
                 setState(() {
