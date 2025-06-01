@@ -17,6 +17,7 @@ class MessageModel {
   final MessageEnum repliedMessageType;
   final List<String> isSeenBy;
   final List<String> deletedBy;
+  final Map<String, dynamic>? eventData;
 
   MessageModel({
     required this.senderUID,
@@ -33,6 +34,7 @@ class MessageModel {
     required this.repliedMessageType,
     required this.isSeenBy,
     required this.deletedBy,
+    this.eventData,
   });
 
   Map<String, dynamic> toMap() {
@@ -51,6 +53,7 @@ class MessageModel {
       Constant.repliedMessageType: repliedMessageType.name,
       Constant.isSeenBy: isSeenBy,
       Constant.deletedBy: deletedBy,
+      'eventData': eventData,
     };
   }
 
@@ -72,6 +75,7 @@ class MessageModel {
         repliedMessageType: MessageEnum.text,
         isSeenBy: [],
         deletedBy: [],
+        eventData: null,
       );
     }
     return MessageModel(
@@ -95,6 +99,10 @@ class MessageModel {
               .toMessageEnum(),
       isSeenBy: List<String>.from(map[Constant.isSeenBy] ?? []),
       deletedBy: List<String>.from(map[Constant.deletedBy] ?? []),
+      eventData:
+          map['eventData'] != null
+              ? Map<String, dynamic>.from(map['eventData'])
+              : null,
     );
   }
 
@@ -114,6 +122,7 @@ class MessageModel {
     List<String>? reactions,
     List<String>? isSeenBy,
     List<String>? deletedBy,
+    Map<String, dynamic>? eventData,
   }) {
     return MessageModel(
       senderUID: senderUID ?? this.senderUID,
@@ -130,6 +139,7 @@ class MessageModel {
       repliedMessageType: repliedMessageType ?? this.repliedMessageType,
       isSeenBy: isSeenBy ?? this.isSeenBy,
       deletedBy: deletedBy ?? this.deletedBy,
+      eventData: eventData ?? this.eventData,
     );
   }
 

@@ -22,7 +22,20 @@ class Event {
     this.color,
   });
 
-bool get isCompleted {
+  factory Event.fromJson(Map<String, dynamic> json) {
+    return Event(
+      eventId: json['eventId'] as String?,
+      title: json['title'] as String?,
+      note: json['note'] as String?,
+      isDone: json['isDone'] as int?,
+      date: json['date'] as String?,
+      startTime: json['startTime'] as String?,
+      endTime: json['endTime'] as String?,
+      color: json['color'] as int?,
+    );
+  }
+
+  bool get isCompleted {
     if (endTime == null || date == null) {
       debugPrint("isCompleted: endTime or date is null");
       return false;
@@ -37,7 +50,6 @@ bool get isCompleted {
       final DateTime parsedDate = dateFormat.parse(date!);
       final DateTime parsedEndTime = timeFormat.parse(endTime!);
 
-    
       DateTime eventEndDateTime = DateTime(
         parsedDate.year,
         parsedDate.month,
@@ -61,7 +73,9 @@ bool get isCompleted {
         }
       }
 
-      debugPrint("Event endDateTime: $eventEndDateTime, Current time: ${DateTime.now()}");
+      debugPrint(
+        "Event endDateTime: $eventEndDateTime, Current time: ${DateTime.now()}",
+      );
 
       return DateTime.now().isAfter(eventEndDateTime);
     } catch (e) {
@@ -100,11 +114,9 @@ bool get isCompleted {
         parsedEndTime.minute,
       );
 
-     
       if (eventEndDateTime.isBefore(eventStartDateTime)) {
         eventEndDateTime = eventEndDateTime.add(Duration(days: 1));
       }
-
 
       final DateTime now = DateTime.now();
       return now.isAfter(eventStartDateTime) && now.isBefore(eventEndDateTime);
@@ -114,20 +126,9 @@ bool get isCompleted {
     }
   }
 
-  Event.fromJson(Map<String, dynamic> json) {
-    eventId = json['eventId'];  
-    title = json['title'];
-    note = json['note'];
-    isDone = json['isDone'];
-    date = json['date'];
-    startTime = json['startTime'];
-    endTime = json['endTime'];
-    color = json['color'];
-  }
-
-
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['eventId'] = eventId;
     data['title'] = title;
     data['note'] = note;
     data['isDone'] = isDone;
@@ -136,18 +137,5 @@ bool get isCompleted {
     data['endTime'] = endTime;
     data['color'] = color;
     return data;
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'eventId': eventId,
-      'title': title,
-      'note': note,
-      'isDone': isDone,
-      'date': date,
-      'startTime': startTime,
-      'endTime': endTime,
-      'color': color,
-    };
   }
 }

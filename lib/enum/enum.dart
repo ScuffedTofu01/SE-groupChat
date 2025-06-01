@@ -1,8 +1,10 @@
 enum FriendViewType { friends, friendRequests, groupView, allUsers }
 
-enum MessageEnum { text, image, video, audio, file }
+enum MessageEnum { text, image, video, audio, file, event }
 
 enum GroupType { private, public }
+
+enum EventVote { attend, decline }
 
 extension MessageEnumExtension on String {
   MessageEnum toMessageEnum() {
@@ -17,6 +19,8 @@ extension MessageEnumExtension on String {
         return MessageEnum.audio;
       case 'file':
         return MessageEnum.file;
+      case 'event':
+        return MessageEnum.event;
       default:
         return MessageEnum.text;
     }

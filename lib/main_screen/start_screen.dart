@@ -13,7 +13,6 @@ import 'package:provider/provider.dart';
 import 'chat_list_Screen.dart';
 import 'home_screen.dart';
 import 'package:flutter/material.dart';
-import 'group_list_screen.dart';
 import 'schedule_screen.dart';
 import '/utilities/asset_manager.dart';
 import '/provider/authentication_provider.dart';
@@ -173,24 +172,24 @@ class _StartScreenState extends State<StartScreen> with WidgetsBindingObserver {
         onPressed: () {
           Navigator.pushNamed(context, '/createGroupScreen');
         },
-        child: const Icon(Icons.add),
         tooltip: 'Create Group',
+        child: const Icon(Icons.add),
       );
     } else if (currentIndex == 1) {
       fab = FloatingActionButton(
         onPressed: () {
           Navigator.pushNamed(context, '/addFriendPage');
         },
-        child: const Icon(Icons.person_add),
         tooltip: 'Add Friend',
+        child: const Icon(Icons.person_add),
       );
     } else if (currentIndex == 0) {
       fab = FloatingActionButton(
         onPressed: () {
           Get.toNamed(Constant.AddEventPage);
         },
-        child: const Icon(CupertinoIcons.calendar_badge_plus),
         tooltip: 'Create Event',
+        child: const Icon(CupertinoIcons.calendar_badge_plus),
       );
     } else {
       fab = null;

@@ -12,10 +12,6 @@ import 'package:uuid/uuid.dart';
 
 class GroupProvider extends ChangeNotifier {
   bool _isSloading = false;
-  // bool _editSettings = true;
-  // bool _approveNewMembers = false;
-  // bool _requestToJoin = false;
-  // bool _lockMessages = false;
 
   GroupModel _groupModel = GroupModel(
     creatorUID: '',
@@ -46,7 +42,6 @@ class GroupProvider extends ChangeNotifier {
   List<UserModel> get groupMembersList => _groupMembersList;
   List<UserModel> get groupAdminsList => _groupAdminsList;
 
-  // firebase initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _firebaseStorage = FirebaseStorage.instance;
 
@@ -205,7 +200,6 @@ class GroupProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // clear group members list
   Future<void> clearGroupMembersList() async {
     _groupMembersList.clear();
     _groupAdminsList.clear();

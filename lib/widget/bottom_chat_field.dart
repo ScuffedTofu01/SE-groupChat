@@ -1,11 +1,15 @@
 import 'package:chatapp/enum/enum.dart';
+import 'package:chatapp/event_page/add_event_page.dart';
 import 'package:chatapp/global_function/global.dart';
-import 'package:chatapp/models/message.dart'; // Import MessageModel
+import 'package:chatapp/models/calendar.dart' as CalendarEvent;
+import 'package:chatapp/models/event.dart' as CalEvent;
+import 'package:chatapp/models/message.dart';
 import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:chatapp/provider/chat_provider.dart';
 import 'package:chatapp/widget/display_msgType.dart';
-// import 'package:firebase_auth/firebase_auth.dart'; // Not directly used in this file after changes
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -203,6 +207,82 @@ class _BottomChatFieldState extends State<BottomChatField> {
     );
   }
 
+  void _handleEventCreationAndSend(CalEvent.Event createdEvent) {
+    // This function will be called by AddEventPage
+    if (!mounted) {
+      debugPrint(
+        "[BottomChatField] _handleEventCreationAndSend: Widget not mounted. Event: ${createdEvent.title}",
+      );
+      return;
+    }
+
+    debugPrint(
+      "[BottomChatField] _handleEventCreationAndSend: Received event - ${createdEvent.title}, Type: ${createdEvent.runtimeType}",
+    );
+
+    // Convert CalEvent.Event to CalendarEvent.Event
+    final calendarEvent = CalendarEvent.Event(
+      eventId: createdEvent.eventId ?? '',
+      title: createdEvent.title ?? 'No Title',
+      note: createdEvent.note ?? '',
+      date:
+          createdEvent.date ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      startTime: createdEvent.startTime ?? '12:00 AM',
+      endTime: createdEvent.endTime ?? '12:30 AM',
+      color: createdEvent.color ?? 0,
+      isDone: (createdEvent.isDone ?? 0) == 1,
+    );
+
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthenticationProvider>(
+      context,
+      listen: false,
+    );
+
+    if (authProvider.userModel == null) {
+      debugPrint(
+        "[BottomChatField] _handleEventCreationAndSend: User model is null.",
+      );
+      // Optionally show a snackbar or handle error
+      return;
+    }
+
+    debugPrint(
+      "[BottomChatField] _handleEventCreationAndSend: Preparing to send event to chat: ${calendarEvent.toMap()}",
+    );
+
+    chatProvider.sendEventMessage(
+      sender: authProvider.userModel!,
+      contactUID: widget.contactUID,
+      contactName: widget.chatName,
+      contactImage: widget.chatImage,
+      eventDetails: calendarEvent,
+      isGroupChat: widget.groupID.isNotEmpty,
+      groupID: widget.groupID,
+      onSuccess: () {
+        if (!mounted) return;
+        debugPrint(
+          "[BottomChatField] _handleEventCreationAndSend: Event message sent successfully!",
+        );
+        if (_pickedFilePreview != null) {
+          setState(() {
+            _pickedFilePreview = null;
+            _pickedFileType = null;
+          });
+        }
+      },
+      onError: (e) {
+        if (!mounted) return;
+        debugPrint(
+          "[BottomChatField] _handleEventCreationAndSend: Error sending event message: $e",
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error sending event: $e")));
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -274,7 +354,6 @@ class _BottomChatFieldState extends State<BottomChatField> {
             children: [
               IconButton(
                 onPressed: () async {
-                  // Use a different context name for the builder to avoid conflict
                   showModalBottomSheet(
                     context: context,
                     builder: (bottomSheetContext) {
@@ -308,10 +387,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
                               leading: const Icon(Icons.videocam),
                               title: const Text('Send Video'),
                               onTap: () async {
-                                Navigator.pop(
-                                  bottomSheetContext,
-                                ); // Pop the modal
-
+                                Navigator.pop(bottomSheetContext);
                                 final picker = ImagePicker();
                                 final pickedFile = await picker.pickVideo(
                                   source: ImageSource.gallery,
@@ -324,6 +400,41 @@ class _BottomChatFieldState extends State<BottomChatField> {
                                     _pickedFileType = MessageEnum.video;
                                   });
                                 }
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(
+                                Icons.event,
+                                color: Colors.blue,
+                              ),
+                              title: const Text('Send Event'),
+                              onTap: () async {
+                                if (bottomSheetContext.mounted) {
+                                  Navigator.pop(bottomSheetContext);
+                                } else {
+                                  debugPrint(
+                                    "[BottomChatField] bottomSheetContext was not mounted before pop.",
+                                  );
+                                  return;
+                                }
+
+                                if (!mounted) {
+                                  debugPrint(
+                                    "[BottomChatField] Widget not mounted before Get.to(AddEventPage).",
+                                  );
+                                  return;
+                                }
+
+                                debugPrint(
+                                  "[BottomChatField] Navigating to AddEventPage with callback.",
+                                );
+                                Get.to(
+                                  () => AddEventPage(
+                                    fromChat: true,
+                                    onEventCreatedAndSentToChat:
+                                        _handleEventCreationAndSend,
+                                  ),
+                                );
                               },
                             ),
                           ],
@@ -352,9 +463,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
               ),
               IconButton(
                 onPressed:
-                    _pickedFilePreview != null
-                        ? _sendFile
-                        : _sendTextMessage, // Updated send logic
+                    _pickedFilePreview != null ? _sendFile : _sendTextMessage,
                 icon: Icon(
                   Icons.send_rounded,
                   color: Theme.of(context).primaryColor,

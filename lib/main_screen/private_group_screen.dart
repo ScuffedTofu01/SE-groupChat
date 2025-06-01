@@ -1,4 +1,5 @@
 import 'package:chatapp/constant.dart';
+import 'package:chatapp/global_function/global.dart';
 import 'package:chatapp/models/group_model.dart';
 import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:chatapp/provider/group_provider.dart';
@@ -36,9 +37,14 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return const Center(child: Text('Something went wrong'));
+                debugPrint(
+                  'Error fetching private groups: ${snapshot.error}',
+                ); // Log stream error
+                return const Center(
+                  child: Text('Something went wrong loading groups.'),
+                );
               }
-              if (snapshot.data!.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No private groups'));
               }
               return Expanded(
@@ -53,7 +59,8 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
                         context
                             .read<GroupProvider>()
                             .setGroupModel(groupModel: groupModel)
-                            .whenComplete(() {
+                            .then((_) {
+                              // Changed from whenComplete to then
                               Navigator.pushNamed(
                                 context,
                                 Constant.ChatScreen,
@@ -62,7 +69,31 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
                                   Constant.contactName: groupModel.groupName,
                                   Constant.contactImage: groupModel.groupImage,
                                   Constant.groupID: groupModel.groupID,
+                                  // It's good practice to pass all necessary identifiers
+                                  'groupName':
+                                      groupModel
+                                          .groupName, // Ensure chatName is derived correctly
+                                  'groupImage':
+                                      groupModel
+                                          .groupImage, // Ensure chatImage is derived correctly
                                 },
+                              );
+                            })
+                            .catchError((error, stackTrace) {
+                              // Added catchError
+                              // Log the error for debugging
+                              debugPrint(
+                                'Error setting group model or navigating to ChatScreen: $error',
+                              );
+                              debugPrint('Stack trace: $stackTrace');
+                              // Optionally, show a user-friendly error message
+                              showCustomSnackbar(
+                                context: context,
+                                title: "Navigation Error",
+                                message:
+                                    "Could not open group chat. Please check your connection and try again.",
+                                backgroundColor: Colors.red,
+                                icon: Icons.error_outline,
                               );
                             });
                       },

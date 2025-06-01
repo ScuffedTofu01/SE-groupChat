@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:chatapp/controllers/event_controller.dart';
+import 'package:chatapp/models/calendar.dart' as CalendarEvent;
 import 'package:chatapp/models/last_message.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:chatapp/models/event.dart' as ControllerEvent;
 import '/constant.dart';
 import '/enum/enum.dart';
 import '/models/message.dart';
@@ -15,13 +18,11 @@ import 'package:flutter/material.dart';
 class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
   MessageReplyModel? _messageReplyModel;
-  String? _currentActualUserId; // To store the actual current user's ID
+  String? _currentActualUserId;
 
   bool get isLoading => _isLoading;
-  MessageReplyModel? get messageReplyModel =>
-      _messageReplyModel; // Expose for UI if needed
+  MessageReplyModel? get messageReplyModel => _messageReplyModel;
 
-  // Call this method when the user logs in or auth state changes
   void setCurrentActualUserId(String? userId) {
     _currentActualUserId = userId;
   }
@@ -31,12 +32,10 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Consistent error callback name
   void _handleError(Function(String) onErrorCallback, String errorMessage) {
     debugPrint('Error: $errorMessage');
     setLoading(false);
     onErrorCallback(errorMessage);
-    // notifyListeners(); // setLoading already calls notifyListeners
   }
 
   void setMessageReplyModel(MessageModel? messageReply) {
@@ -45,18 +44,14 @@ class ChatProvider extends ChangeNotifier {
         debugPrint(
           "ChatProvider Error: _currentActualUserId is null. Cannot accurately determine 'isMe' for reply.",
         );
-        // Fallback, or consider throwing an error / preventing reply if ID is missing
       }
       _messageReplyModel = MessageReplyModel(
         message: messageReply.message,
         senderUID: messageReply.senderUID,
         senderName: messageReply.senderName,
-        senderImage:
-            messageReply.senderImage, // Optional: for future use in reply UI
+        senderImage: messageReply.senderImage,
         messageType: messageReply.messageType,
-        isMe:
-            messageReply.senderUID ==
-            _currentActualUserId, // Use actual current user's ID
+        isMe: messageReply.senderUID == _currentActualUserId,
       );
     } else {
       _messageReplyModel = null;
@@ -65,24 +60,23 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> handlePrivateMessage({
-    required String contactUID, // Recipient's UID
-    required String contactName, // Recipient's Name
-    required String contactImage, // Recipient's Image
-    required MessageModel messageModel, // The message being sent
+    required String contactUID,
+    required String contactName,
+    required String contactImage,
+    required MessageModel messageModel,
     required Function onSuccess,
     required Function(String) onError,
   }) async {
     try {
-      // Create the sender's (current user's) last message entry for their chat list
       final senderLastMessage = LastMessageModel(
-        senderUID: messageModel.senderUID, // Current user's UID
-        contactUID: contactUID, // The other person in the chat
-        contactName: contactName, // The other person's name
-        contactImage: contactImage, // The other person's image
+        senderUID: messageModel.senderUID,
+        contactUID: contactUID,
+        contactName: contactName,
+        contactImage: contactImage,
         message: messageModel.message,
         messageType: messageModel.messageType,
         timeSent: messageModel.timeSent,
-        isSeen: true, // Sender has "seen" their own message in their chat list
+        isSeen: true,
       );
 
       final contactLastMessage = LastMessageModel(
@@ -96,7 +90,6 @@ class ChatProvider extends ChangeNotifier {
         isSeen: false,
       );
 
-      // Write message to sender's message subcollection
       await _firestore
           .collection(Constant.users)
           .doc(messageModel.senderUID)
@@ -106,7 +99,6 @@ class ChatProvider extends ChangeNotifier {
           .doc(messageModel.messageId)
           .set(messageModel.toMap());
 
-      // Write message to contact's message subcollection
       await _firestore
           .collection(Constant.users)
           .doc(contactUID)
@@ -116,7 +108,6 @@ class ChatProvider extends ChangeNotifier {
           .doc(messageModel.messageId)
           .set(messageModel.toMap());
 
-      // Update sender's last message document
       await _firestore
           .collection(Constant.users)
           .doc(messageModel.senderUID)
@@ -124,7 +115,29 @@ class ChatProvider extends ChangeNotifier {
           .doc(contactUID)
           .set(senderLastMessage.toMap());
 
-      // Update contact's last message document
+      await _firestore
+          .collection(Constant.users)
+          .doc(contactUID)
+          .collection(Constant.chats)
+          .doc(messageModel.senderUID)
+          .set(contactLastMessage.toMap());
+
+      await _firestore
+          .collection(Constant.users)
+          .doc(contactUID)
+          .collection(Constant.chats)
+          .doc(messageModel.senderUID)
+          .collection(Constant.messages)
+          .doc(messageModel.messageId)
+          .set(messageModel.toMap());
+
+      await _firestore
+          .collection(Constant.users)
+          .doc(messageModel.senderUID)
+          .collection(Constant.chats)
+          .doc(contactUID)
+          .set(senderLastMessage.toMap());
+
       await _firestore
           .collection(Constant.users)
           .doc(contactUID)
@@ -171,33 +184,26 @@ class ChatProvider extends ChangeNotifier {
         messageId: messageId,
         isSeen: false,
         repliedMessage:
-            repliedMessage
-                    .isNotEmpty // Use parameter if provided
+            repliedMessage.isNotEmpty
                 ? repliedMessage
-                : _messageReplyModel?.message ?? '', // Fallback
+                : _messageReplyModel?.message ?? '',
         repliedTo:
-            repliedTo
-                    .isNotEmpty // Use parameter if provided
+            repliedTo.isNotEmpty
                 ? repliedTo
-                : _messageReplyModel ==
-                    null // Fallback
+                : _messageReplyModel == null
                 ? ''
                 : _messageReplyModel!.isMe
                 ? 'You'
                 : _messageReplyModel!.senderName,
         repliedMessageType:
-            repliedMessageType !=
-                    MessageEnum
-                        .text // Use parameter if different from default
+            repliedMessageType != MessageEnum.text
                 ? repliedMessageType
-                : _messageReplyModel?.messageType ??
-                    MessageEnum.text, // Fallback
+                : _messageReplyModel?.messageType ?? MessageEnum.text,
         isSeenBy: [sender.uid],
         deletedBy: [],
       );
 
       if (isGroupChat) {
-        // Handle group message
         await _firestore
             .collection(Constant.groups)
             .doc(groupID)
@@ -205,17 +211,16 @@ class ChatProvider extends ChangeNotifier {
             .doc(messageId)
             .set(message.toMap());
 
-        // Update the last message for the group
         await _firestore.collection(Constant.groups).doc(groupID).update({
           Constant.lastMessage: messageText,
           Constant.timeSent: DateTime.now().millisecondsSinceEpoch,
           Constant.senderUID: sender.uid,
-          Constant.messageType: messageType.name, // Store as string
+          Constant.messageType: messageType.name,
         });
 
         setLoading(false);
         onSuccess();
-        setMessageReplyModel(null); // Clear reply context
+        setMessageReplyModel(null);
       } else {
         await handlePrivateMessage(
           // Added await
@@ -226,13 +231,10 @@ class ChatProvider extends ChangeNotifier {
           onSuccess: () {
             setLoading(false);
             onSuccess();
-            setMessageReplyModel(null); // Clear reply context
+            setMessageReplyModel(null);
           },
           onError: (String errorMessage) {
-            _handleError(
-              onError,
-              errorMessage,
-            ); // Use centralized error handling
+            _handleError(onError, errorMessage);
           },
         );
       }
@@ -248,7 +250,7 @@ class ChatProvider extends ChangeNotifier {
     required String contactImage,
     required File file,
     required MessageEnum messageType,
-    required String groupId, // Consistent naming with sendTextMessage
+    required String groupId,
     required Function onSuccess,
     String repliedMessage = '',
     String repliedTo = '',
@@ -328,7 +330,7 @@ class ChatProvider extends ChangeNotifier {
         } else if (messageType == MessageEnum.audio) {
           lastMessagePreview = "[Audio]";
         } else {
-          lastMessagePreview = "[File]"; // Assuming MessageEnum.file exists
+          lastMessagePreview = "[File]";
         }
 
         await _firestore.collection(Constant.groups).doc(groupId).update({
@@ -350,7 +352,7 @@ class ChatProvider extends ChangeNotifier {
           onSuccess: () {
             setLoading(false);
             onSuccess();
-            setMessageReplyModel(null); // Clear reply context
+            setMessageReplyModel(null);
           },
           onError: (String errorMessage) {
             _handleError(onError, errorMessage);
@@ -378,14 +380,13 @@ class ChatProvider extends ChangeNotifier {
 
   Stream<List<MessageModel>> getMessagesStream({
     required String userId,
-    required String contactUID, // Can be contact's UID or groupID
-    required bool isGroup, // Explicit boolean
+    required String contactUID,
+    required bool isGroup,
   }) {
     if (isGroup) {
-      // Group chat messages
       return _firestore
           .collection(Constant.groups)
-          .doc(contactUID) // Here contactUID is the groupID
+          .doc(contactUID)
           .collection(Constant.messages)
           .orderBy(Constant.timeSent)
           .snapshots()
@@ -395,12 +396,11 @@ class ChatProvider extends ChangeNotifier {
             }).toList();
           });
     } else {
-      // Private chat messages
       return _firestore
           .collection(Constant.users)
           .doc(userId)
           .collection(Constant.chats)
-          .doc(contactUID) // Here contactUID is the other user's UID
+          .doc(contactUID)
           .collection(Constant.messages)
           .orderBy(Constant.timeSent)
           .snapshots()
@@ -423,15 +423,15 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> markMessagesAsSeen({
-    required String userId, // The current user marking messages as seen
-    required String chatId, // contactUID for private, groupId for group
+    required String userId,
+    required String chatId,
     required bool isGroup,
   }) async {
     try {
       if (isGroup) {
         final messagesRef = _firestore
             .collection(Constant.groups)
-            .doc(chatId) // chatId is groupId
+            .doc(chatId)
             .collection(Constant.messages);
 
         final snapshot =
@@ -487,7 +487,6 @@ class ChatProvider extends ChangeNotifier {
         "[ChatProvider] ERROR marking messages as seen for chat $chatId: $e",
       );
       debugPrint(stackTrace.toString());
-      // Decide if you want to rethrow or handle silently
     }
   }
 
@@ -496,9 +495,7 @@ class ChatProvider extends ChangeNotifier {
     required String contactUID,
     required bool isGroup,
   }) {
-    // 1. check if its a group message
     if (isGroup) {
-      // handle group message
       return _firestore
           .collection(Constant.groups)
           .doc(contactUID)
@@ -526,6 +523,411 @@ class ChatProvider extends ChangeNotifier {
           .where(Constant.senderUID, isNotEqualTo: userId)
           .snapshots()
           .map((event) => event.docs.length);
+    }
+  }
+
+  Future<void> sendEventMessage({
+    required UserModel sender,
+    required String contactUID,
+    required String contactName,
+    required String contactImage,
+    required CalendarEvent.Event eventDetails,
+    required bool isGroupChat,
+    required String groupID,
+    String repliedMessage = '',
+    String repliedTo = '',
+    MessageEnum repliedMessageType = MessageEnum.text,
+    required Function onSuccess,
+    required Function(String) onError,
+  }) async {
+    setLoading(true);
+    try {
+      debugPrint(
+        "[ChatProvider SendEvent] Received eventDetails for groupID '$groupID': ${eventDetails.toMap()}",
+      );
+      final messageId = _firestore.collection('messages').doc().id;
+
+      Map<String, dynamic> fullEventData = eventDetails.toMap();
+      fullEventData['attendingParticipants'] = [];
+      fullEventData['declinedParticipants'] = [];
+
+      if (fullEventData['eventId'] == null ||
+          (fullEventData['eventId'] is String &&
+              (fullEventData['eventId'] as String).isEmpty)) {
+        fullEventData['eventId'] = eventDetails.eventId;
+      }
+
+      final messageModel = MessageModel(
+        senderUID: sender.uid,
+        senderName: sender.name,
+        senderImage: sender.image,
+        contactUID: isGroupChat ? groupID : contactUID,
+        message: "📅 Event: ${eventDetails.title}",
+        messageType: MessageEnum.event,
+        timeSent: DateTime.now(),
+        messageId: messageId,
+        isSeen: false,
+        repliedMessage:
+            repliedMessage.isNotEmpty
+                ? repliedMessage
+                : _messageReplyModel?.message ?? '',
+        repliedTo:
+            repliedTo.isNotEmpty
+                ? repliedTo
+                : _messageReplyModel == null
+                ? ''
+                : _messageReplyModel!.isMe
+                ? 'You'
+                : _messageReplyModel!.senderName,
+        repliedMessageType:
+            repliedMessageType != MessageEnum.text
+                ? repliedMessageType
+                : _messageReplyModel?.messageType ?? MessageEnum.text,
+        isSeenBy: [sender.uid],
+        deletedBy: [],
+        eventData: fullEventData,
+      );
+
+      if (isGroupChat) {
+        debugPrint(
+          "[ChatProvider SendEvent] Group MessageModel to save for groupID '$groupID': ${messageModel.toMap()}",
+        );
+        await _firestore
+            .collection(Constant.groups)
+            .doc(groupID)
+            .collection(Constant.messages)
+            .doc(messageId)
+            .set(messageModel.toMap());
+
+        await _firestore.collection(Constant.groups).doc(groupID).update({
+          Constant.lastMessage: messageModel.message,
+          Constant.timeSent: DateTime.now().millisecondsSinceEpoch,
+          Constant.senderUID: sender.uid,
+          Constant.messageType: MessageEnum.event.name,
+        });
+        setLoading(false);
+        onSuccess();
+        setMessageReplyModel(null);
+      } else {
+        debugPrint(
+          "[ChatProvider SendEvent] Private MessageModel to save for contactUID '$contactUID': ${messageModel.toMap()}",
+        );
+        await handlePrivateMessage(
+          contactUID: contactUID,
+          contactName: contactName,
+          contactImage: contactImage,
+          messageModel: messageModel,
+          onSuccess: () {
+            setLoading(false);
+            onSuccess();
+            setMessageReplyModel(null);
+          },
+          onError: (String errorMessage) {
+            _handleError(onError, errorMessage);
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint(
+        "[ChatProvider SendEvent] Error sending event message: $e",
+      ); // Add this line
+      _handleError(onError, e.toString());
+    }
+  }
+
+  int _determineEventStatusFromCalendarEvent(
+    CalendarEvent.Event calEventDetails,
+  ) {
+    if (calEventDetails.isDone == true) {
+      return 2;
+    }
+
+    try {
+      final DateFormat dateFormat = DateFormat("yyyy-MM-dd");
+
+      final DateFormat timeFormat = DateFormat("h:mm a");
+
+      final DateTime parsedDate = dateFormat.parse(calEventDetails.date);
+      final DateTime parsedStartTime = timeFormat.parse(
+        calEventDetails.startTime,
+      );
+      final DateTime parsedEndTime = timeFormat.parse(calEventDetails.endTime);
+
+      final DateTime eventStartDateTime = DateTime(
+        parsedDate.year,
+        parsedDate.month,
+        parsedDate.day,
+        parsedStartTime.hour,
+        parsedStartTime.minute,
+      );
+      DateTime eventEndDateTime = DateTime(
+        parsedDate.year,
+        parsedDate.month,
+        parsedDate.day,
+        parsedEndTime.hour,
+        parsedEndTime.minute,
+      );
+
+      // Handle events that span across midnight
+      if (eventEndDateTime.isBefore(eventStartDateTime)) {
+        eventEndDateTime = eventEndDateTime.add(const Duration(days: 1));
+      }
+
+      final DateTime now = DateTime.now();
+
+      if (now.isAfter(eventStartDateTime) && now.isBefore(eventEndDateTime)) {
+        return 1;
+      } else if (now.isBefore(eventStartDateTime)) {
+        return 0;
+      } else {
+        return 0;
+      }
+    } catch (e) {
+      debugPrint(
+        "ChatProvider - Error parsing date/time for event status determination: $e",
+      );
+      return 0;
+    }
+  }
+
+  Future<void> handleEventAcceptance({
+    required String acceptingUserId,
+    required String senderUserId,
+    required MessageModel eventMessage,
+    required Function onSuccess,
+    required Function(String) onError,
+    required EventController eventController,
+  }) async {
+    setLoading(true);
+    try {
+      if (eventMessage.eventData == null) {
+        throw Exception("Event data is missing from the message.");
+      }
+      final eventDetails = CalendarEvent.Event.fromMap(eventMessage.eventData!);
+
+      final eventForController = ControllerEvent.Event(
+        eventId: eventDetails.eventId,
+        title: eventDetails.title,
+        note: eventDetails.note,
+        date: eventDetails.date,
+        startTime: eventDetails.startTime,
+        endTime: eventDetails.endTime,
+        color: eventDetails.color,
+
+        isDone: _determineEventStatusFromCalendarEvent(eventDetails),
+      );
+
+      bool isReceiverAvailable = await eventController
+          .checkCalendarAvailability(acceptingUserId, eventForController);
+      if (!isReceiverAvailable) {
+        onError("You already have an event scheduled at this time.");
+        setLoading(false);
+        return;
+      }
+
+      await eventController.addEventToUserCalendar(
+        acceptingUserId,
+        eventForController,
+        eventMessage.messageId,
+      );
+
+      Map<String, dynamic> updatedEventData = Map<String, dynamic>.from(
+        eventMessage.eventData!,
+      );
+      updatedEventData['status'] = 'accepted';
+      List<String> acceptedByList = List<String>.from(
+        updatedEventData['acceptedBy'] ?? [],
+      );
+      if (!acceptedByList.contains(acceptingUserId)) {
+        acceptedByList.add(acceptingUserId);
+      }
+      updatedEventData['acceptedBy'] = acceptedByList;
+
+      final String chatEntityId = eventMessage.contactUID;
+      DocumentSnapshot groupDoc =
+          await _firestore.collection(Constant.groups).doc(chatEntityId).get();
+      bool isActuallyGroupChat = groupDoc.exists;
+
+      if (isActuallyGroupChat) {
+        await _firestore
+            .collection(Constant.groups)
+            .doc(chatEntityId)
+            .collection(Constant.messages)
+            .doc(eventMessage.messageId)
+            .update({'eventData': updatedEventData});
+      } else {
+        await _firestore
+            .collection(Constant.users)
+            .doc(acceptingUserId)
+            .collection(Constant.chats)
+            .doc(senderUserId)
+            .collection(Constant.messages)
+            .doc(eventMessage.messageId)
+            .update({'eventData': updatedEventData});
+        await _firestore
+            .collection(Constant.users)
+            .doc(senderUserId)
+            .collection(Constant.chats)
+            .doc(acceptingUserId)
+            .collection(Constant.messages)
+            .doc(eventMessage.messageId)
+            .update({'eventData': updatedEventData});
+      }
+
+      setLoading(false);
+      onSuccess();
+    } catch (e) {
+      _handleError(onError, e.toString());
+    }
+  }
+
+  Future<void> recordEventVote({
+    required String originalMessageId,
+    required String chatContextId,
+    required bool isGroupChat,
+    required String votingUserId,
+    required EventVote vote,
+    required EventController eventController,
+    required BuildContext context,
+    required Function onSuccess,
+    required Function(String) onError,
+  }) async {
+    setLoading(true);
+    try {
+      DocumentReference messageDocRef;
+      DocumentReference? otherUserMessageDocRef;
+
+      if (isGroupChat) {
+        messageDocRef = _firestore
+            .collection(Constant.groups)
+            .doc(chatContextId)
+            .collection(Constant.messages)
+            .doc(originalMessageId);
+      } else {
+        messageDocRef = _firestore
+            .collection(Constant.users)
+            .doc(votingUserId)
+            .collection(Constant.chats)
+            .doc(chatContextId)
+            .collection(Constant.messages)
+            .doc(originalMessageId);
+
+        otherUserMessageDocRef = _firestore
+            .collection(Constant.users)
+            .doc(chatContextId)
+            .collection(Constant.chats)
+            .doc(votingUserId)
+            .collection(Constant.messages)
+            .doc(originalMessageId);
+      }
+
+      final messageSnapshot = await messageDocRef.get();
+      if (!messageSnapshot.exists || messageSnapshot.data() == null) {
+        throw Exception("Event message not found in Firestore.");
+      }
+      final messageData = messageSnapshot.data() as Map<String, dynamic>;
+      final eventDataFromMessage =
+          messageData['eventData'] as Map<String, dynamic>?;
+
+      if (eventDataFromMessage == null) {
+        throw Exception("Event data missing in the message.");
+      }
+
+      final String actualEventId =
+          eventDataFromMessage['eventId'] as String? ?? '';
+      if (actualEventId.isEmpty) {
+        throw Exception("Event ID is missing from eventData in the message.");
+      }
+
+      DocumentSnapshot eventDocSnapshot =
+          await _firestore.collection('events').doc(actualEventId).get();
+      if (!eventDocSnapshot.exists || eventDocSnapshot.data() == null) {
+        throw Exception(
+          "Event details not found in 'events' collection for ID: $actualEventId",
+        );
+      }
+      final ControllerEvent.Event eventForCalendar = ControllerEvent
+          .Event.fromJson(eventDocSnapshot.data() as Map<String, dynamic>);
+      eventForCalendar.eventId = actualEventId;
+
+      Map<String, dynamic> updateData;
+
+      if (vote == EventVote.attend) {
+        bool isAvailable = await eventController.checkCalendarAvailability(
+          votingUserId,
+          eventForCalendar,
+        );
+        if (!isAvailable) {
+          bool proceed =
+              await showDialog<bool>(
+                context: context,
+                barrierDismissible: false,
+                builder:
+                    (dialogContext) => AlertDialog(
+                      title: const Text("Event Overlap"),
+                      content: const Text(
+                        "You have another event scheduled at this time. Proceed anyway?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed:
+                              () => Navigator.of(dialogContext).pop(false),
+                          child: const Text("Decline This Event"),
+                        ),
+                        TextButton(
+                          onPressed:
+                              () => Navigator.of(dialogContext).pop(true),
+                          child: const Text("Attend Anyway"),
+                        ),
+                      ],
+                    ),
+              ) ??
+              false;
+
+          if (!proceed) {
+            setLoading(false);
+            onSuccess();
+            return;
+          }
+        }
+        await eventController.addEventToUserCalendar(
+          votingUserId,
+          eventForCalendar,
+          actualEventId,
+        );
+        updateData = {
+          'eventData.attendingParticipants': FieldValue.arrayUnion([
+            votingUserId,
+          ]),
+          'eventData.declinedParticipants': FieldValue.arrayRemove([
+            votingUserId,
+          ]),
+        };
+      } else {
+        // EventVote.decline
+        updateData = {
+          'eventData.declinedParticipants': FieldValue.arrayUnion([
+            votingUserId,
+          ]),
+          'eventData.attendingParticipants': FieldValue.arrayRemove([
+            votingUserId,
+          ]),
+        };
+      }
+
+      await messageDocRef.update(updateData);
+      if (otherUserMessageDocRef != null) {
+        await otherUserMessageDocRef
+            .update(updateData)
+            .catchError(
+              (e) => debugPrint("Error updating other user's message copy: $e"),
+            );
+      }
+
+      setLoading(false);
+      onSuccess();
+    } catch (e) {
+      _handleError(onError, e.toString());
     }
   }
 }

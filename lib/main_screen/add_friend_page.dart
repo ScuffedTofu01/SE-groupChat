@@ -485,33 +485,31 @@ class _AddFriendPageState extends State<AddFriendPage> {
       return;
     }
 
-    if (targetUserUID != null) {
-      try {
-        await context.read<AuthenticationProvider>().sendFriendRequest(
-          targetUserUID,
+    try {
+      await context.read<AuthenticationProvider>().sendFriendRequest(
+        targetUserUID,
+      );
+      if (mounted) {
+        showCustomSnackbar(
+          context: context,
+          title: "Success",
+          message: "Friend request sent!",
+          backgroundColor: Colors.green,
+          icon: Icons.check_circle,
         );
-        if (mounted) {
-          showCustomSnackbar(
-            context: context,
-            title: "Success",
-            message: "Friend request sent!",
-            backgroundColor: Colors.green,
-            icon: Icons.check_circle,
-          );
-          _emailController.clear(); // Clear input field
-        }
-      } catch (e) {
-        if (mounted) {
-          showCustomSnackbar(
-            context: context,
-            title: "Error",
-            message: e.toString(),
-            backgroundColor: Colors.red,
-            icon: Icons.error_outline,
-          );
-        }
-        print('Error sending friend request on page: $e');
+        _emailController.clear(); // Clear input field
       }
+    } catch (e) {
+      if (mounted) {
+        showCustomSnackbar(
+          context: context,
+          title: "Error",
+          message: e.toString(),
+          backgroundColor: Colors.red,
+          icon: Icons.error_outline,
+        );
+      }
+      print('Error sending friend request on page: $e');
     }
   }
 }

@@ -3,7 +3,6 @@ import 'package:chatapp/models/group_model.dart';
 import 'package:chatapp/models/last_message.dart';
 import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:chatapp/widget/unread_message.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

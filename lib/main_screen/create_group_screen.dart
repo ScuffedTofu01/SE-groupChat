@@ -189,8 +189,21 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   GroupType groupValue = GroupType.private;
 
   void createGroup() {
-    final uid = context.read<AuthenticationProvider>().userModel!.uid;
+    final authProvider = context.read<AuthenticationProvider>();
     final groupProvider = context.read<GroupProvider>();
+
+    if (authProvider.userModel == null || authProvider.uid == null) {
+      showCustomSnackbar(
+        context: context,
+        title: 'Error',
+        message: 'User data not loaded. Please try again.',
+        backgroundColor: Colors.red,
+        icon: Icons.error_outline,
+      );
+      return;
+    }
+    final String uid = authProvider.uid!;
+
     if (groupNameController.text.isEmpty) {
       showCustomSnackbar(
         context: context,

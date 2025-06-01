@@ -32,20 +32,20 @@ class EventController extends GetxController {
 
       event.eventId = docRef.id;
 
-      await docRef.update({
-        'eventId': event.eventId,
-      });
+      await docRef.update({'eventId': event.eventId});
 
-      QuerySnapshot calendarSnapshot = await _firestore
-          .collection('calendars')
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
+      QuerySnapshot calendarSnapshot =
+          await _firestore
+              .collection('calendars')
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
 
       if (calendarSnapshot.docs.isNotEmpty) {
-        DocumentReference calendarDocRef = calendarSnapshot.docs.first.reference;
+        DocumentReference calendarDocRef =
+            calendarSnapshot.docs.first.reference;
         await calendarDocRef.update({
-          'events': FieldValue.arrayUnion([event.toMap()]),
+          'events': FieldValue.arrayUnion([event.toJson()]),
         });
       } else {
         Get.snackbar(
@@ -55,6 +55,7 @@ class EventController extends GetxController {
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
+        return;
       }
 
       Get.snackbar(
@@ -78,19 +79,26 @@ class EventController extends GetxController {
   Future<void> fetchEventsForUserAndDate(String userId, DateTime date) async {
     try {
       isLoading.value = true;
-      QuerySnapshot calendarSnapshot = await _firestore
-          .collection('calendars')
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
+      QuerySnapshot calendarSnapshot =
+          await _firestore
+              .collection('calendars')
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
 
       if (calendarSnapshot.docs.isNotEmpty) {
         DocumentSnapshot calendarDoc = calendarSnapshot.docs.first;
         List<dynamic> eventList = calendarDoc['events'];
-        List<Event> userEvents = eventList.map((e) => Event.fromJson(e)).toList();
+        List<Event> userEvents =
+            eventList.map((e) => Event.fromJson(e)).toList();
 
-        
-        events.value = userEvents.where((event) => event.date == DateFormat('yyyy-MM-dd').format(date)).toList();
+        events.value =
+            userEvents
+                .where(
+                  (event) =>
+                      event.date == DateFormat('yyyy-MM-dd').format(date),
+                )
+                .toList();
       } else {
         events.clear();
       }
@@ -98,7 +106,7 @@ class EventController extends GetxController {
       print("Error fetching events: $e");
       events.clear();
     } finally {
-      isLoading.value = false; 
+      isLoading.value = false;
     }
   }
 
@@ -115,53 +123,177 @@ class EventController extends GetxController {
     }
   }
 
-void deleteEvent(Event event) async {
-  try {
-    final User? user = _auth.currentUser;
-    if (user == null) {
-      throw Exception("No user is currently signed in.");
+  void deleteEvent(Event event) async {
+    try {
+      final User? user = _auth.currentUser;
+      if (user == null) {
+        throw Exception("No user is currently signed in.");
+      }
+      final String userId = user.uid;
+
+      // Delete the event from Firestore
+      await _firestore.collection('events').doc(event.eventId).delete();
+
+      // Remove the event from the user's calendar
+      QuerySnapshot calendarSnapshot =
+          await _firestore
+              .collection('calendars')
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
+
+      if (calendarSnapshot.docs.isNotEmpty) {
+        DocumentReference calendarDocRef =
+            calendarSnapshot.docs.first.reference;
+        await calendarDocRef.update({
+          'events': FieldValue.arrayRemove([event.toJson()]),
+        });
+      }
+
+      // Remove the event from the local list
+      events.remove(event);
+
+      // Refresh the events list
+      await fetchEventsForUserAndDate(userId, DateTime.now());
+
+      Get.snackbar(
+        "Success",
+        "Event deleted successfully!",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Failed to delete event: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
-    final String userId = user.uid;
-
-    // Delete the event from Firestore
-    await _firestore.collection('events').doc(event.eventId).delete();
-
-    // Remove the event from the user's calendar
-    QuerySnapshot calendarSnapshot = await _firestore
-        .collection('calendars')
-        .where('userId', isEqualTo: userId)
-        .limit(1)
-        .get();
-
-    if (calendarSnapshot.docs.isNotEmpty) {
-      DocumentReference calendarDocRef = calendarSnapshot.docs.first.reference;
-      await calendarDocRef.update({
-        'events': FieldValue.arrayRemove([event.toMap()]),
-      });
-    }
-
-    // Remove the event from the local list
-    events.remove(event);
-
-    // Refresh the events list
-    await fetchEventsForUserAndDate(userId, DateTime.now());
-
-    Get.snackbar(
-      "Success",
-      "Event deleted successfully!",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-  } catch (e) {
-    Get.snackbar(
-      "Error",
-      "Failed to delete event: $e",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
   }
-}
 
+  Future<bool> checkCalendarAvailability(
+    String userId,
+    Event eventToCheck,
+  ) async {
+    isLoading.value = true;
+    try {
+      QuerySnapshot calendarSnapshot =
+          await _firestore
+              .collection('calendars')
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
+
+      if (calendarSnapshot.docs.isNotEmpty) {
+        DocumentSnapshot calendarDoc = calendarSnapshot.docs.first;
+        List<dynamic> eventList = calendarDoc['events'] ?? [];
+        List<Event> userEvents =
+            eventList
+                .map((e) => Event.fromJson(e as Map<String, dynamic>))
+                .toList();
+
+        if (eventToCheck.date == null ||
+            eventToCheck.startTime == null ||
+            eventToCheck.endTime == null) {
+          debugPrint("Event to check has null date/time fields.");
+          isLoading.value = false;
+          return false; // Cannot check availability
+        }
+
+        final DateFormat timeFormat = DateFormat("h:mm a");
+        final DateTime newEventStart = timeFormat.parse(
+          eventToCheck.startTime!,
+        );
+        final DateTime newEventEnd = timeFormat.parse(eventToCheck.endTime!);
+
+        for (var existingEvent in userEvents) {
+          if (existingEvent.date == eventToCheck.date) {
+            if (existingEvent.startTime == null ||
+                existingEvent.endTime == null) {
+              continue;
+            }
+
+            final DateTime existingStart = timeFormat.parse(
+              existingEvent.startTime!,
+            );
+            final DateTime existingEnd = timeFormat.parse(
+              existingEvent.endTime!,
+            );
+
+            // Check for overlap: (StartA < EndB) and (StartB < EndA)
+            if (newEventStart.isBefore(existingEnd) &&
+                existingStart.isBefore(newEventEnd)) {
+              isLoading.value = false;
+              return false; // Conflict found
+            }
+          }
+        }
+      }
+      isLoading.value = false;
+      return true; // No conflicts or no calendar/events
+    } catch (e) {
+      print("Error checking calendar availability: $e");
+      isLoading.value = false;
+      return false; // Assume conflict on error
+    }
+  }
+
+  Future<void> addEventToUserCalendar(
+    String userId,
+    Event event,
+    String? sharedEventId,
+  ) async {
+    // If sharedEventId is provided and valid, this event might already exist in the main 'events' collection.
+    // Otherwise, add it as a new event.
+    try {
+      String eventIdToUse = sharedEventId ?? event.eventId ?? '';
+
+      if (eventIdToUse.isEmpty) {
+        // Event doesn't have an ID, create it in 'events' collection
+        DocumentReference docRef = await _firestore
+            .collection('events')
+            .add(event.toJson());
+        eventIdToUse = docRef.id;
+        await docRef.update({'eventId': eventIdToUse});
+        event.eventId = eventIdToUse; // Update event object with new ID
+      } else {
+        // Optionally, ensure the event exists in the 'events' collection or update it
+        await _firestore
+            .collection('events')
+            .doc(eventIdToUse)
+            .set(event.toJson(), SetOptions(merge: true));
+        event.eventId = eventIdToUse;
+      }
+
+      QuerySnapshot calendarSnapshot =
+          await _firestore
+              .collection('calendars')
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
+
+      if (calendarSnapshot.docs.isNotEmpty) {
+        DocumentReference calendarDocRef =
+            calendarSnapshot.docs.first.reference;
+        await calendarDocRef.update({
+          'events': FieldValue.arrayUnion([event.toJson()]),
+        });
+      } else {
+        print("Error: Calendar not found for user $userId");
+        throw Exception("Calendar not found for user $userId");
+      }
+      if (_auth.currentUser?.uid == userId) {
+        await fetchEventsForUserAndDate(
+          userId,
+          DateFormat('yyyy-MM-dd').parse(event.date!),
+        );
+      }
+    } catch (e) {
+      print("Failed to add event to user $userId's calendar: $e");
+      rethrow;
+    }
+  }
 }

@@ -86,38 +86,32 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottomInternal() {
-    // ... existing _scrollToBottomInternal code ...
-    print(
-      "ChatScroll_Debug: Attempting scroll. MaxScrollExtent before delay: ${_scrollController.position.maxScrollExtent}, Pixels: ${_scrollController.position.pixels}",
-    );
-
-    Future.delayed(const Duration(milliseconds: 100), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
         final currentMaxExtent = _scrollController.position.maxScrollExtent;
         final currentPixels = _scrollController.position.pixels;
         print(
-          "ChatScroll_Debug: After delay. MaxScrollExtent: $currentMaxExtent, Pixels: $currentPixels",
+          "ChatScroll_Debug: Inside addPostFrameCallback. MaxScrollExtent: $currentMaxExtent, Pixels: $currentPixels",
         );
 
-        if (currentMaxExtent > 0 &&
-            (currentMaxExtent - currentPixels).abs() > 1.0) {
+        if (currentMaxExtent > 0) {
           _scrollController.animateTo(
             currentMaxExtent,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
           );
-          print("ChatScroll_Debug: Animation initiated to $currentMaxExtent.");
-        } else if (currentMaxExtent <= 0) {
           print(
-            "ChatScroll_Debug: MaxScrollExtent is 0 or less. No scroll needed or possible.",
+            "ChatScroll_Debug: Animation to bottom ($currentMaxExtent) initiated.",
           );
         } else {
           print(
-            "ChatScroll_Debug: Already at/near bottom. No scroll initiated.",
+            "ChatScroll_Debug: MaxScrollExtent is 0 or less. No scroll needed or possible.",
           );
         }
       } else {
-        print("ChatScroll_Debug: After delay, not mounted or no clients.");
+        print(
+          "ChatScroll_Debug: Inside addPostFrameCallback, not mounted or no clients.",
+        );
       }
     });
   }
@@ -133,13 +127,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (isGroupChat) {
                   Navigator.pushNamed(
                     context,
-                    '/groupInfoScreen',
+                    Constant.groupInformationScreen,
                     arguments: groupID,
                   );
                 } else {
                   Navigator.pushNamed(
                     context,
-                    '/profileScreen',
+                    Constant.profileScreen,
                     arguments: contactUID,
                   );
                 }

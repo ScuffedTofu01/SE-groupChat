@@ -6,7 +6,6 @@ import 'package:chatapp/provider/authentication_provider.dart';
 import 'package:chatapp/provider/group_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chatapp/main_screen/add_friend_page.dart';
 
 class FriendWidget extends StatelessWidget {
   const FriendWidget({
