@@ -1,4 +1,5 @@
 import 'package:chatapp/controllers/event_controller.dart';
+import 'package:chatapp/main_screen/event_info_screen.dart';
 import 'package:chatapp/models/event.dart' as CalEvent;
 import 'package:chatapp/widget/evenTile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -207,7 +208,22 @@ class _CalendarViewState extends State<CalendarView> {
                           duration: const Duration(milliseconds: 375),
                           child: SlideAnimation(
                             verticalOffset: 50.0,
-                            child: FadeInAnimation(child: Eventile(event)),
+                            child: FadeInAnimation(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => EventInfoScreen(
+                                            eventData: event.toJson(),
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: Eventile(event),
+                              ),
+                            ),
                           ),
                         );
                       },

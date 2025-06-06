@@ -14,7 +14,7 @@ class EventInfoScreen extends StatelessWidget {
       DateTime parsedDate = DateFormat("yyyy-MM-dd").parse(dateStr);
       return DateFormat("EEEE, MMMM d, yyyy").format(parsedDate);
     } catch (e) {
-      return dateStr; // Return original if parsing fails
+      return dateStr;
     }
   }
 
@@ -30,8 +30,7 @@ class EventInfoScreen extends StatelessWidget {
     final String? startTime = eventData['startTime'] as String?;
     final String? endTime = eventData['endTime'] as String?;
     final String? note = eventData['note'] as String?;
-    final String? location =
-        eventData['location'] as String?; // Assuming you might have location
+    final String? location = eventData['location'] as String?;
 
     final List<String> attendingParticipants = List<String>.from(
       eventData['attendingParticipants'] ?? [],
@@ -246,7 +245,7 @@ class EventInfoScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       vertical: 1.0,
                       horizontal: 2.0,
-                    ), // Reduced vertical padding
+                    ),
                     child: Chip(
                       avatar: CircleAvatar(
                         backgroundColor: Colors.grey.shade300,
@@ -264,7 +263,7 @@ class EventInfoScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8.0,
                         vertical: 2.0,
-                      ), // Added compact padding
+                      ),
                     ),
                   );
                 }
@@ -275,7 +274,7 @@ class EventInfoScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       vertical: 1.0,
                       horizontal: 2.0,
-                    ), // Reduced vertical padding
+                    ),
                     child: Chip(
                       avatar: CircleAvatar(
                         backgroundColor: Colors.grey.shade300,
@@ -293,24 +292,21 @@ class EventInfoScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8.0,
                         vertical: 2.0,
-                      ), // Added compact padding
+                      ),
                     ),
                   );
                 }
 
                 final userData = snapshot.data!.data() as Map<String, dynamic>;
-                final user = UserModel.fromMap(
-                  userData,
-                ); // Assuming you have UserModel.fromMap
+                final user = UserModel.fromMap(userData);
 
                 ImageProvider avatarImage;
                 if (user.image.isNotEmpty) {
                   avatarImage = NetworkImage(user.image);
                 } else {
-                  // Use a default asset image or generate initials
                   avatarImage = const AssetImage(
                     'assets/User/Sample_User_Icon.png',
-                  ); // Replace with your default asset
+                  );
                 }
 
                 return Padding(
@@ -319,11 +315,10 @@ class EventInfoScreen extends StatelessWidget {
                     horizontal: 4.0,
                   ),
                   child: Row(
-                    // Replace Chip with Row
-                    mainAxisSize: MainAxisSize.min, // Keep it compact
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
-                        radius: 18, // Set your desired avatar radius
+                        radius: 18,
                         backgroundImage: avatarImage,
                         backgroundColor: Colors.grey.shade300,
                         child:
@@ -334,14 +329,13 @@ class EventInfoScreen extends StatelessWidget {
                                       : "?",
                                   style: TextStyle(
                                     color: Colors.grey.shade700,
-                                    fontSize:
-                                        24, // Adjusted font size for initials
+                                    fontSize: 24,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 )
                                 : null,
                       ),
-                      const SizedBox(width: 8), // Space between avatar and text
+                      const SizedBox(width: 8),
                       Text(
                         user.name.isNotEmpty ? user.name : 'Unknown User',
                         style: const TextStyle(

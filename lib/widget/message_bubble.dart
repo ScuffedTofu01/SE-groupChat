@@ -168,8 +168,6 @@ class MessageBubble extends StatelessWidget {
         bool currentUserHasResponded =
             currentUserIsAttending || currentUserIsDeclined;
 
-        //mainContentChildren.add(const SizedBox(height: 8));
-
         if (currentUserHasResponded) {
           if (currentUserIsAttending) {
             eventActionWidgets.add(

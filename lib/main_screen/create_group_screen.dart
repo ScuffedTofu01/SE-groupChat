@@ -327,7 +327,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
             const SizedBox(height: 10),
 
-            // texField for group name
             TextField(
               controller: groupNameController,
               maxLength: 25,
@@ -340,7 +339,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // textField for group description
+
             TextField(
               controller: groupDescriptionController,
               maxLength: 100,

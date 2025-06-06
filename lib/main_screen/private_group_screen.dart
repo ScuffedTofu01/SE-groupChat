@@ -27,7 +27,6 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
             child: CupertinoSearchTextField(onChanged: (value) {}),
           ),
 
-          // stream builder for private groups
           StreamBuilder<List<GroupModel>>(
             stream: context.read<GroupProvider>().getPrivateGroupsStream(
               userId: uid,
@@ -60,7 +59,6 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
                             .read<GroupProvider>()
                             .setGroupModel(groupModel: groupModel)
                             .then((_) {
-                              // Changed from whenComplete to then
                               Navigator.pushNamed(
                                 context,
                                 Constant.ChatScreen,
@@ -69,24 +67,18 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
                                   Constant.contactName: groupModel.groupName,
                                   Constant.contactImage: groupModel.groupImage,
                                   Constant.groupID: groupModel.groupID,
-                                  // It's good practice to pass all necessary identifiers
-                                  'groupName':
-                                      groupModel
-                                          .groupName, // Ensure chatName is derived correctly
-                                  'groupImage':
-                                      groupModel
-                                          .groupImage, // Ensure chatImage is derived correctly
+
+                                  'groupName': groupModel.groupName,
+                                  'groupImage': groupModel.groupImage,
                                 },
                               );
                             })
                             .catchError((error, stackTrace) {
-                              // Added catchError
-                              // Log the error for debugging
                               debugPrint(
                                 'Error setting group model or navigating to ChatScreen: $error',
                               );
                               debugPrint('Stack trace: $stackTrace');
-                              // Optionally, show a user-friendly error message
+
                               showCustomSnackbar(
                                 context: context,
                                 title: "Navigation Error",

@@ -7,11 +7,11 @@ import '../event_page/add_event_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';  
+import 'package:google_fonts/google_fonts.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import '/controllers/event_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import './event_info_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,32 +39,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); 
+    _timer?.cancel();
     super.dispose();
   }
 
- void _fetchEvents() async {
-  User? user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    await _eventController.fetchEventsForUserAndDate(user.uid, _selectedDate);
+  void _fetchEvents() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await _eventController.fetchEventsForUserAndDate(user.uid, _selectedDate);
 
-    final DateFormat timeFormat = DateFormat("h:mm a");
-    _eventController.events.sort((a, b) {
-      if (a.startTime == null || b.startTime == null) {
-        return 0; 
-      }
+      final DateFormat timeFormat = DateFormat("h:mm a");
+      _eventController.events.sort((a, b) {
+        if (a.startTime == null || b.startTime == null) {
+          return 0;
+        }
 
-      try {
-        final DateTime startTimeA = timeFormat.parse(a.startTime!);
-        final DateTime startTimeB = timeFormat.parse(b.startTime!);
-        return startTimeA.compareTo(startTimeB);
-      } catch (e) {
-        debugPrint("Error parsing startTime: $e");
-        return 0; 
-      }
-    });
+        try {
+          final DateTime startTimeA = timeFormat.parse(a.startTime!);
+          final DateTime startTimeB = timeFormat.parse(b.startTime!);
+          return startTimeA.compareTo(startTimeB);
+        } catch (e) {
+          debugPrint("Error parsing startTime: $e");
+          return 0;
+        }
+      });
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -116,10 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(left: 15, top: 15),
             child: AddButton(
               label: "Create Event",
-              onTap: () => Get.to(
-                () => AddEventPage(),
-                transition: Transition.rightToLeft,
-              ),
+              onTap:
+                  () => Get.to(
+                    () => AddEventPage(),
+                    transition: Transition.rightToLeft,
+                  ),
             ),
           ),
         ],
@@ -172,9 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: Obx(() {
         if (_eventController.isLoading.value) {
-          return Center(
-            child: CircularProgressIndicator(),
-          );
+          return Center(child: CircularProgressIndicator());
         }
 
         if (_eventController.events.isEmpty) {
@@ -191,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView.builder(
             itemCount: _eventController.events.length,
             itemBuilder: (_, index) {
+              final event = _eventController.events[index];
               return AnimationConfiguration.staggeredList(
                 position: index,
                 child: SlideAnimation(
@@ -199,7 +199,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => EventInfoScreen(
+                                      eventData: event.toJson(),
+                                    ),
+                              ),
+                            );
                           },
                           child: Eventile(_eventController.events[index]),
                         ),
